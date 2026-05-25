@@ -39,3 +39,15 @@ def score(y_true, y_pred) -> float:
 
 def greater_is_better() -> bool:
     return METRIC.greater_is_better
+
+
+def sklearn_scorer():
+    """sklearn-compatible scorer for the project metric (for HPO / cross_val_score).
+
+    sklearn maximizes, so error metrics are negated (greater_is_better handled).
+    """
+    from sklearn.metrics import make_scorer
+    fn = _REGISTRY.get(METRIC.name)
+    if fn is None:
+        raise NotImplementedError(f"Metric {METRIC.name!r} not in evaluate._REGISTRY.")
+    return make_scorer(fn, greater_is_better=METRIC.greater_is_better)

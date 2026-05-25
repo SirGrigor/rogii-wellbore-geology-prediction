@@ -1,4 +1,4 @@
-notebooks/01_eda.py
+notebooks/03_baseline_lgb.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
@@ -6,9 +6,11 @@ notebooks/01_eda.py
 # To switch: edit this line, push, then re-run clone → meta → install → run.
 # ============================================================================
 #
-# STATUS: setup complete (2026-05-25). Phase-0 recon next (local; no Colab yet).
-# Modeling has NOT started — no script needs GPU yet, so the line above is just a
-# placeholder pointing at the EDA notebook to be written during recon.
+# STATUS (2026-05-25): tooling complete. Tier-0 floor v0_floor = 15.91 ft RMSE.
+# ACTIVE = v1_lgb_resid (residual LGB baseline) — RUN ON COLAB (full-data training;
+# never local, per feedback_cloud-first-compute). It logs to the diary, saves
+# probs/v1_lgb_resid/model_full.pkl for the Kaggle inference notebook, and prints
+# feature gains to tell Tier 1 whether the alignment recipe is the bottleneck.
 #
 # WORKFLOW REMINDER:
 #   - Every experiment goes through the diary discipline FIRST:

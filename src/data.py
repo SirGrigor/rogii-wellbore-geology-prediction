@@ -15,10 +15,29 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import TEST_DIR, TRAIN_DIR, WELL_ID
+import numpy as np
+
+from .config import TEST_DIR, TRAIN_DIR, TVT_INPUT_COL, WELL_ID
 
 _HORIZ_SUFFIX = "__horizontal_well.csv"
 _TYPEWELL_SUFFIX = "__typewell.csv"
+
+
+def ps_index(df: pd.DataFrame) -> int:
+    """Prediction-Start row = first scored (post-PS) row = number of known TVT_input values.
+
+    TVT_input holds the true TVT on the known prefix and is NaN afterwards (verified EDA),
+    and the known part is a contiguous prefix, so the count of non-NaN == the first NaN index.
+    """
+    return int(df[TVT_INPUT_COL].notna().sum())
+
+
+def post_ps_mask(df: pd.DataFrame) -> np.ndarray:
+    """Boolean mask of the scored (post-PS) rows — the rows the metric is computed on."""
+    ps = ps_index(df)
+    m = np.zeros(len(df), dtype=bool)
+    m[ps:] = True
+    return m
 
 
 def _split_dir(split: str) -> Path:

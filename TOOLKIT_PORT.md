@@ -22,16 +22,23 @@ and porting the model-class-specific pieces *on first use*, once Phase-0 confirm
 | `synth_decoder.adversarial` | synth-decoder | ✅ Train/test shift diagnostic. |
 | `synth_decoder.matching` / `fingerprint` | synth-decoder | ❌ Assume synthetic generator. rogii is REAL data — skip. |
 
-## To port — at the start of the MODELING phase (after metric confirmed)
+## BUILT in rogii/src (2026-05-25) — regression-shaped; candidates to promote to utils later
 
-These hardcode binary classification (`objective="binary"`, `roc_auc_score`). Porting them
-*before* the metric/direction is confirmed would be wasted work, so they wait for Phase-0.
+The shared utils `train.py`/`blend.py` are classification + Registry-coupled (S6E4 lineage);
+retrofitting them risked destabilizing the shared toolkit, so we built regression versions in
+rogii/src. Promote to `kaggle-playground-utils` (with a `Task` enum clf/reg) once proven on rogii.
+
+| Tool | rogii/src | Notes |
+|---|---|---|
+| **Variant factory** | `src/train.py` `train_variant(algo, ...)` | LGB/XGB/CatBoost regression, GroupKFold-by-well, per-fold RMSE, artifacts to `probs/<v>/`, `fit_full` saves the deployable model for the Kaggle inference notebook. |
+| **Supervised blend** | `src/blend.py` `nm_optimize_oof` | RMSE objective, `allow_negative`, **optimize + SELECT on GroupKFold OOF** (L48/L53). `rank_normalize` + `marginal_report` (decorrelation-necessary-not-sufficient). No Registry coupling. |
+
+## Still to port — when needed
 
 | Tool | S6E5 source | Port spec |
 |---|---|---|
-| **Variant factory** | `playground-s6e5/src/train.py` | Parametrize objective + eval: LGB `regression`/`regression_l1`, XGB `reg:squarederror`, CatBoost `RMSE`. Replace `roc_auc_score` with the confirmed regression scorer. Add target transform hook (Yeo-Johnson — S5E9 toolkit). Promote to `kaggle-playground-utils.train` with a `Task` enum (clf/reg). |
-| **Blend math** | `playground-s6e5/src/blend_math.py` | Port `nm_optimize_holdout` → `nm_optimize_oof` with an **RMSE objective + `allow_negative`** flag. **Optimize + SELECT on GroupKFold OOF, never holdout/LB** (L48: negative weights overfit on holdout; L53: supervised CV-blend beats LB-probing). `rank_normalize` ports as-is. The quadratic-LB-fit helper is LB-probing — keep but de-emphasize. See `docs/strategy.md` §2. |
-| **Paradigm radar** | `playground-s6e5/notebooks/_viz_paradigm_radar.py` | Coverage map over experiment axes. Generic once axes are redefined for a regression/sequence comp (FE-depth, alignment, model class, target transform, CV scheme, ...). |
+| **Paradigm radar** | `playground-s6e5/notebooks/_viz_paradigm_radar.py` | Coverage map over experiment axes. Redefine axes for this comp (FE-depth, alignment recipe, model class, target transform, CV scheme, spatial). Port when ≥5 models exist. |
+| target transform | S5E9 (Yeo-Johnson `TransformedTargetRegressor`) | Add to `train_variant` as an optional hook if the drift residual is skewed. |
 
 ## NEW for this competition (no prior art — build in `src/`)
 

@@ -77,6 +77,29 @@ def add_lags(
     return out
 
 
+def add_deviation(
+    df: pd.DataFrame,
+    curve_cols: list[str],
+    depth_col: str = DEPTH_COL,
+) -> pd.DataFrame:
+    """Within-sequence deviation features (the Amex pattern, L46 caveat — see strategy.md §4).
+
+    These are DIFFERENT quantities from basic lags/rolling (which were redundant on S6E5):
+      {col}_dev_expmean : value minus the well's EXPANDING mean (anomaly vs history so far)
+      {col}_dev_first   : value minus the well's first value (total change)
+      {col}_accel       : 2nd difference (diff-of-diffs) = rate-of-change acceleration
+
+    Expanding (not full-well) statistics → no look-ahead leak across the PS boundary.
+    """
+    out = _sorted_by_depth(df, depth_col).copy()
+    g = out.groupby(WELL_ID, sort=False)
+    for col in curve_cols:
+        out[f"{col}_dev_expmean"] = out[col] - g[col].transform(lambda s: s.expanding().mean())
+        out[f"{col}_dev_first"] = out[col] - g[col].transform("first")
+        out[f"{col}_accel"] = g[col].diff().groupby(out[WELL_ID]).diff()
+    return out
+
+
 def add_well_position(df: pd.DataFrame, depth_col: str = DEPTH_COL) -> pd.DataFrame:
     """Normalized position along each well: 0.0 at the shallowest, 1.0 at the deepest.
 

@@ -48,9 +48,10 @@ def test_metric_dispatch():
 
 
 def test_dtw_alignment_runs():
-    a = np.sin(np.linspace(0, 6, 40))
-    b = np.sin(np.linspace(0, 6, 25))
-    feats = align.alignment_features(a, b, typewell_depth=np.linspace(0, 100, 25))
-    assert feats["matched_tw_index"].shape == (40,)
-    assert "matched_tw_depth" in feats
-    assert np.isfinite(feats["dtw_cost"])
+    a = np.sin(np.linspace(0, 6, 40))           # horizontal GR
+    b = np.sin(np.linspace(0, 6, 25))           # type-well GR
+    tvt = np.linspace(0, 100, 25)               # type-well TVT axis
+    out = align.align_curves(a, b, tvt, window=10)
+    assert out["matched_tvt"].shape == (40,)
+    assert out["local_shift"].shape == (40,)
+    assert np.isfinite(out["dtw_cost"])

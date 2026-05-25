@@ -6,10 +6,13 @@ the **transferable** parts for ROGII and flags what does NOT transfer. Read befo
 
 ## 0. Compute: cloud-first, always
 
-**All model training runs on Colab** (`notebooks/colab_runner.ipynb`). Do not burn the local machine.
-Local is for: EDA, the experiment diary, blend math, GATE checks, post-processing, submission
-assembly. NN / big-GBDT / DTW-over-all-wells → Colab GPU. (feedback_cloud-first-compute.)
-The runner installs `kaggle-playground-utils` from GitHub; `synth-decoder`'s GATE checks stay local.
+**ALL model fits run on Colab — including quick sanity fits. No `.fit()` / `train_variant` on the
+local machine, ever** (reinforced 2026-05-25). Verify pipelines by shapes/dtypes/imports/feature-
+parity, NOT by training. `notebooks/03_baseline_lgb.py` and later training run via
+`colab_runner.ipynb`. Local is for: EDA, feature assembly, DTW alignment, blend math (scipy on
+arrays, not a model), GATE checks, submission assembly, tests (the one fit-test is gated behind
+`ROGII_RUN_FIT_TESTS=1`). The runner installs `kaggle-playground-utils` from GitHub; `synth-decoder`
+GATE checks stay local. (feedback_cloud-first-compute.)
 
 ## 1. Experiment methodology
 
@@ -50,9 +53,12 @@ The S6E5 endgame was almost entirely about blending. The lessons, ranked by how 
 
 ## 3. Regression toolkit (from S5E9 — directly applies; ROGII is RMSE)
 
-- **Anchor + residual.** S5E9 used a constant-mean anchor; **ROGII's anchor is `TVT_input`.** Model
-  Δ = TVT − TVT_input on post-PS rows, not absolute TVT. The floor baseline (`predict TVT = TVT_input`)
-  is the explicit anchor to beat — measure it first.
+- **Anchor + residual (VERIFIED necessary).** `TVT_input` is NaN post-PS, so the anchor is the
+  **last-known TVT** at PS. **Model the drift Δ = TVT − anchor, never absolute TVT** — a 40-well
+  pipeline check put absolute-TVT LGB at ~113 ft RMSE (trees can't extrapolate the 9.2k–12.9k ft
+  level across wells) vs the ~12 ft floor. `features.build_dataset(target="residual")` does this by
+  default and returns `anchor`; de-residualize with `tvt_pred = drift_pred + anchor`. Floor
+  (carry-forward, Δ=0) = 15.91 ft — the baseline to beat.
 - **Target transform** (`TransformedTargetRegressor` + Yeo-Johnson/PowerTransformer) on Δ if its
   distribution is skewed; always invert for the metric.
 - **BayesianRidge meta-learner** for stacking OOF predictions (S5E9 winner's meta).

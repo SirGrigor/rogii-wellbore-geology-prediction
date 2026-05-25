@@ -6,9 +6,31 @@ experiment-diary observer to this project (see the configure() call at the end).
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from kaggle_playground_utils.observer import MetricSpec, configure
+try:
+    from kaggle_playground_utils.observer import MetricSpec, configure
+    _HAS_DIARY = True
+except ImportError:
+    # Inference env (e.g. Kaggle kernels-only, internet OFF) has no kaggle-playground-utils
+    # and doesn't need the experiment diary. Provide a minimal MetricSpec + no-op configure
+    # so config/evaluate still load with only numpy/pandas/sklearn/lightgbm available.
+    from dataclasses import dataclass
+
+    @dataclass
+    class MetricSpec:  # type: ignore[no-redef]
+        name: str = "rmse"
+        greater_is_better: bool = False
+        fold_collapse_drop: float = 1.5
+        leak_gap: float = 0.5
+        regression_drop: float = 0.1
+        fold_instability_std: float = 1.0
+
+    def configure(*_a, **_k):  # type: ignore[no-redef]
+        return None
+
+    _HAS_DIARY = False
 
 # --------------------------------------------------------------------------- paths
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +50,16 @@ DOCS = ROOT / "docs"
 #   raw/test/{id}__horizontal_well.csv      + raw/test/{id}__typewell.csv
 #   raw/sample_submission.csv
 #   raw/AI_wellbore_geology_prediction_task_en.pptx
+# Environment-aware raw-data location. On Kaggle (kernels-only submission), the
+# competition data is mounted read-only at /kaggle/input/<comp>/ — repoint there so
+# src.data works unchanged in the inference notebook. Override with ROGII_DATA_DIR.
+_KAGGLE_INPUT = Path("/kaggle/input/rogii-wellbore-geology-prediction")
+_ENV_DATA = os.environ.get("ROGII_DATA_DIR")
+if _ENV_DATA:
+    RAW = Path(_ENV_DATA)
+elif _KAGGLE_INPUT.exists():
+    RAW = _KAGGLE_INPUT
+
 TRAIN_DIR = RAW / "train"
 TEST_DIR = RAW / "test"
 SAMPLE_SUBMISSION = RAW / "sample_submission.csv"
