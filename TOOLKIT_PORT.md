@@ -30,7 +30,7 @@ These hardcode binary classification (`objective="binary"`, `roc_auc_score`). Po
 | Tool | S6E5 source | Port spec |
 |---|---|---|
 | **Variant factory** | `playground-s6e5/src/train.py` | Parametrize objective + eval: LGB `regression`/`regression_l1`, XGB `reg:squarederror`, CatBoost `RMSE`. Replace `roc_auc_score` with the confirmed regression scorer. Add target transform hook (Yeo-Johnson — S5E9 toolkit). Promote to `kaggle-playground-utils.train` with a `Task` enum (clf/reg). |
-| **Blend math** | `playground-s6e5/src/blend_math.py` | `nm_optimize_holdout` + `rank_normalize` are reusable; pass a `scorer` + `greater_is_better` instead of hardcoded AUC. Keep supervised-on-labeled-holdout discipline (feedback_supervised-blend-not-lb-probing); the quadratic-LB-fit helper is LB-probing — keep but de-emphasize. |
+| **Blend math** | `playground-s6e5/src/blend_math.py` | Port `nm_optimize_holdout` → `nm_optimize_oof` with an **RMSE objective + `allow_negative`** flag. **Optimize + SELECT on GroupKFold OOF, never holdout/LB** (L48: negative weights overfit on holdout; L53: supervised CV-blend beats LB-probing). `rank_normalize` ports as-is. The quadratic-LB-fit helper is LB-probing — keep but de-emphasize. See `docs/strategy.md` §2. |
 | **Paradigm radar** | `playground-s6e5/notebooks/_viz_paradigm_radar.py` | Coverage map over experiment axes. Generic once axes are redefined for a regression/sequence comp (FE-depth, alignment, model class, target transform, CV scheme, ...). |
 
 ## NEW for this competition (no prior art — build in `src/`)

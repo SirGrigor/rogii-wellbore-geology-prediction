@@ -106,7 +106,11 @@ print('=' * 70)
 print(f'--- {{SCRIPT}} header ---')
 !head -30 {{SCRIPT}}
 """),
-    md("## 4. Install dependencies (auto-detected from the script's imports)"),
+    md("## 4. Install dependencies (auto-detected from the script's imports)\n\n"
+       "We do NOT `pip install -e .` (its tool deps are editable local paths that don't exist on "
+       "Colab). Instead: base deps + the shared **kaggle-playground-utils** from GitHub (public). "
+       "`src.*` imports work because we run from the cloned repo root. **synth-decoder is local-only** "
+       "— its GATE/adversarial checks are cheap and run on your machine, not on Colab GPU."),
     code("""import os
 from pathlib import Path
 
@@ -120,20 +124,19 @@ NEEDS_OPTUNA   = 'optuna' in s
 NEEDS_TORCH    = 'torch' in s or NEEDS_PYTABKIT
 
 !pip install -q uv
-# Install the project itself (editable) — this pulls kaggle-playground-utils +
-# synth-decoder + the base deps from pyproject, so src.* imports work on Colab.
-!uv pip install -q --system -e .
 
-extras = []
-if NEEDS_DTW:      extras.append('dtaidistance')
-if NEEDS_CATBOOST: extras.append('catboost')
-if NEEDS_PYTABKIT: extras.append('pytabkit')
-if NEEDS_OPTUNA:   extras.append('optuna')
-if extras:
-    !uv pip install -q --system {' '.join(extras)}
+# Base deps + the shared toolkit from GitHub (public). NOT `-e .` — see the note above.
+base = ['numpy', 'pandas', 'scipy', 'scikit-learn', 'pyarrow', 'lightgbm', 'xgboost',
+        'matplotlib', 'seaborn', 'dtaidistance']
+if NEEDS_CATBOOST: base.append('catboost')
+if NEEDS_PYTABKIT: base.append('pytabkit')
+if NEEDS_OPTUNA:   base.append('optuna')
+!uv pip install -q --system {' '.join(base)}
+!uv pip install -q --system "git+https://github.com/SirGrigor/kaggle-playground-utils.git"
 
-import lightgbm, sklearn, numpy, pandas, pyarrow
+import lightgbm, sklearn, numpy, pandas
 print(f'numpy {numpy.__version__}  pandas {pandas.__version__}  sklearn {sklearn.__version__}  lgb {lightgbm.__version__}')
+import kaggle_playground_utils as _kpu; print(f'kaggle-playground-utils {_kpu.__version__}  (diary/observer/viz available)')
 if NEEDS_TORCH:
     import torch
     print(f'torch {torch.__version__}  CUDA={torch.cuda.is_available()}  '
