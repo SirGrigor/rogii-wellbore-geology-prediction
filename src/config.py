@@ -41,30 +41,45 @@ N_FOLDS = 5
 HOLDOUT_FRAC = 0.20
 
 # --------------------------------------------------------------------------- problem
-# Predict True Vertical Thickness (TVT) per depth along the horizontal well.
-TARGET = "TVT"          # PROVISIONAL — confirm exact column name from the data in Phase-0
-WELL_ID = "well_id"     # derived from the filename ({id}__horizontal_well.csv)
+# Predict True Vertical Thickness (TVT, in feet) per 1-ft MD step along the horizontal
+# well, BEYOND the Prediction Start (PS) point, by matching its GR signature to the
+# type-well's GR-vs-TVT profile. CONFIRMED from the .pptx brief + data (Phase-0, 2026-05-25).
+TARGET = "TVT"            # true target column in the TRAIN horizontal_well.csv
+SUBMISSION_TARGET = "tvt"  # column name in sample_submission.csv (lowercase)
+SUBMISSION_ID = "id"       # id format: "{well_id}_{row_index}" (rows AFTER the PS point)
+WELL_ID = "well_id"        # derived from the filename ({id}__horizontal_well.csv)
 
-# Metric — PROVISIONAL. Public-LB scores in starter notebooks were ~9.2-9.9, i.e.
-# a regression ERROR (lower is better). Confirm the EXACT metric + direction from
-# the competition Evaluation tab / the .pptx brief in Phase-0, then update this.
-# Thresholds below are on the metric's own scale (~9 RMSE), NOT AUC's 0-1 scale.
+# Metric — CONFIRMED (brief slide 14): RMSE of dTVT = (manualTVT - predictedTVT) over all
+# predicted points. Feet units; LB leaders ~9.25. Thresholds are on the ~9-ft scale and
+# are PROVISIONAL until the baseline establishes empirical fold variance (only 64 train wells).
 METRIC = MetricSpec(
-    name="rmse",                 # TODO Phase-0: confirm (RMSE? MAE? something custom?)
-    greater_is_better=False,     # error metric → lower is better
-    fold_collapse_drop=0.50,     # a fold > mean+0.5 error = collapse  (tune after EDA)
-    leak_gap=0.30,               # |oof-holdout| error gap above this looks like a leak
-    regression_drop=0.05,        # holdout error worse by >0.05 vs parent = regression
-    fold_instability_std=0.40,   # error std across folds above this = unstable
+    name="rmse",
+    greater_is_better=False,     # RMSE error → lower is better
+    fold_collapse_drop=1.5,      # a fold > mean+1.5 ft = collapse (tune after baseline)
+    leak_gap=0.5,                # |oof-holdout| ft gap above this looks like a leak
+    regression_drop=0.1,         # holdout worse by >0.1 ft vs parent = regression
+    fold_instability_std=1.0,    # ft std across folds above this = unstable
 )
 
-# --------------------------------------------------------------------------- schema
-# Log-curve columns — to be CONFIRMED from the CSV headers in Phase-0 EDA.
-# Typical geosteering curves: gamma-ray (GR), resistivity (RES/RT), bulk density (RHOB).
-# Depth references: measured depth (MD), true vertical depth (TVD).
-DEPTH_COL = "MD"                 # TODO Phase-0: confirm measured-depth column name
-CURVE_COLS: list[str] = []       # TODO Phase-0: fill from horizontal_well.csv header
-TYPEWELL_CURVE_COLS: list[str] = []  # TODO Phase-0: fill from typewell.csv header
+# --------------------------------------------------------------------------- schema (CONFIRMED Phase-0)
+DEPTH_COL = "MD"                 # measured depth, 1-ft steps
+TRAJECTORY_COLS = ["X", "Y", "Z"]  # 3D coordinates of each horizontal-well sample
+CURVE_COLS = ["GR"]              # gamma-ray — the ONLY log curve; the alignment signal (may contain NaN)
+TVT_INPUT_COL = "TVT_input"      # = true TVT until PS, naive carry-forward after PS. Strong anchor:
+                                 # model the RESIDUAL (TVT - TVT_input) for scored (post-PS) rows.
+
+# Usable horizontal-well features = columns present in BOTH train AND test:
+FEATURE_COLS = ["MD", "X", "Y", "Z", "GR", "TVT_input"]
+
+# TRAIN-ONLY columns — geological formation top depths. NOT in test → DO NOT use as model
+# features (feature-availability leakage). Use only for analysis / auxiliary targets.
+TRAIN_ONLY_HORIZONTAL_COLS = ["ANCC", "ASTNU", "ASTNL", "EGFDU", "EGFDL", "BUDA"]
+
+# Type-well (vertical reference): TVT (depth axis) + GR. Train typewell ALSO has "Geology"
+# (layer name) — train-only. Alignment target: map horizontal GR -> typewell (GR,TVT).
+TYPEWELL_CURVE_COLS = ["GR"]
+TYPEWELL_DEPTH_COL = "TVT"
+TYPEWELL_TRAIN_ONLY_COLS = ["Geology"]
 
 # --------------------------------------------------------------------------- wire diary
 # One call: makes `from src.observer import Experiment` and `python -m src.diary`
