@@ -65,10 +65,14 @@ METRIC = MetricSpec(
 DEPTH_COL = "MD"                 # measured depth, 1-ft steps
 TRAJECTORY_COLS = ["X", "Y", "Z"]  # 3D coordinates of each horizontal-well sample
 CURVE_COLS = ["GR"]              # gamma-ray — the ONLY log curve; the alignment signal (may contain NaN)
-TVT_INPUT_COL = "TVT_input"      # = true TVT until PS, naive carry-forward after PS. Strong anchor:
-                                 # model the RESIDUAL (TVT - TVT_input) for scored (post-PS) rows.
+TVT_INPUT_COL = "TVT_input"      # = true TVT on the KNOWN PREFIX, and NaN after PS (verified EDA).
+                                 # PS = df[TVT_INPUT_COL].notna().sum(). It is NOT a carry-forward.
+                                 # Anchor for scored rows = the LAST KNOWN TVT (TVT_input[ps-1]);
+                                 # model the drift from it (floor = carry-forward, RMSE 15.91 ft).
 
-# Usable horizontal-well features = columns present in BOTH train AND test:
+# Columns present in BOTH train AND test horizontal CSVs. NOTE: TVT_input is all-NaN on the
+# scored (post-PS) rows, so it is not a direct feature there — it defines the known prefix +
+# the last-known-TVT anchor. GR is the alignment signal (~29% NaN — handle before FE).
 FEATURE_COLS = ["MD", "X", "Y", "Z", "GR", "TVT_input"]
 
 # TRAIN-ONLY columns — geological formation top depths. NOT in test → DO NOT use as model

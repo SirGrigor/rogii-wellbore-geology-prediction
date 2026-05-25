@@ -1,5 +1,11 @@
 # Phase-0 Reconnaissance — ROGII Wellbore Geology Prediction
 
+> **⚠ Updated by Tier-0 EDA (`docs/eda.md`, 2026-05-25) — two facts here were provisional/wrong:**
+> (1) **773 train wells / 3 test wells** (not 64 — the file API page-capped at 200).
+> (2) **`TVT_input` is NaN after PS, NOT a carry-forward.** The anchor is the **last-known TVT**;
+> the floor (carry-forward) measured **15.91 ft RMSE** (≈ Deotte CV15). See `docs/eda.md` for all
+> corrected numbers; the task/metric/levers below remain valid.
+
 **Date:** 2026-05-25 · **Source:** competition brief (`AI_wellbore_geology_prediction_task_en.pptx`),
 `sample_submission.csv`, one train + one test well pair, public-kernel scan. Rules accepted
 (`userHasEntered: True`).
@@ -44,8 +50,8 @@ geology **dips**, and dip is similar in **neighboring wells** — so well locati
 
 ## Key modeling levers (ranked, from the brief + data)
 
-1. **Anchor + residual.** Predict `TVT = TVT_input + Δ`; model Δ only on post-PS rows. The naive
-   `predict TVT = TVT_input` is the floor baseline — measure it first.
+1. **Anchor + drift.** `TVT_input` is NaN post-PS, so the anchor is the **last-known TVT** at PS.
+   Floor = carry it forward (measured **15.91 ft RMSE**, `v0_floor`); model the **drift** from it.
 2. **GR curve alignment** (`src/align.py`): align horizontal GR ↔ typewell (GR→TVT) via DTW/DWT;
    `matched_tw_depth` is a direct TVT estimate. This is the winning public paradigm (DWT 9.251,
    "Target-Free Alignment"). **GATE any alignment feature** (synth_decoder.gate) before trusting it.
