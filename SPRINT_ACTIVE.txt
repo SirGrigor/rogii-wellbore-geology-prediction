@@ -1,0 +1,24 @@
+notebooks/01_eda.py
+# ============================================================================
+# ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
+# ----------------------------------------------------------------------------
+# First non-comment line = "<script> [args]" to run on Colab.
+# To switch: edit this line, push, then re-run clone → meta → install → run.
+# ============================================================================
+#
+# STATUS: setup complete (2026-05-25). Phase-0 recon next (local; no Colab yet).
+# Modeling has NOT started — no script needs GPU yet, so the line above is just a
+# placeholder pointing at the EDA notebook to be written during recon.
+#
+# WORKFLOW REMINDER:
+#   - Every experiment goes through the diary discipline FIRST:
+#       from src.observer import Experiment
+#       exp = Experiment.start(version=..., parent=..., hypothesis=...,
+#                              predicted_delta=..., confidence=...)
+#       ... train + eval ...  exp.record(...); exp.commit()
+#   - Cloud-first: NN / heavy training → Colab via this runner. Local = sanity,
+#     EDA, blend math, post-processing (feedback_cloud-first-compute).
+#
+# LOCKED PICKS FALLBACK (fill once we have submissions):
+#   Pick #1 = (none yet)
+#   Pick #2 = (none yet)
