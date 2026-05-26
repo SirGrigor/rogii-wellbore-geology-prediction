@@ -132,17 +132,30 @@ def train_variant(
     fit_full: bool = False,
     use_gpu: bool | str = "auto",
 ) -> TrainResult:
-    """Train `algo` (lgb|xgb|cat) with GroupKFold-by-well + early stopping.
+    """Train `algo` (lgb|xgb|cat) with GroupKFold-by-well + early stopping. GPU-first.
 
-    use_gpu: "auto" (use a CUDA GPU if present), True, or False. Affects xgb (device=cuda)
-        and cat (task_type=GPU); lgb stays CPU on Colab (unreliable GPU build) — early
-        stopping keeps it fast. For a GPU run prefer algo="xgb".
-    fit_full: after CV, refit ONE model on ALL rows (no eval set → uses the folds' mean
-        best-iteration as n_estimators) and save it to probs/<version>/model_full.pkl —
-        the deployable model the Kaggle inference notebook loads. CV gives the honest OOF.
+    use_gpu: "auto" (default — use a CUDA GPU if present), True, or False. xgb (device=cuda)
+        and cat (task_type=GPU) run on GPU when available; **lgb stays CPU** (its Colab GPU
+        build is unreliable) but early-stops fast. If a GPU fit raises (driver/OOM), the run
+        **automatically falls back to CPU** rather than crashing.
+    fit_full: after CV, refit ONE model on ALL rows (no eval set → folds' mean best-iteration
+        as n_estimators), saved to probs/<version>/model_full.pkl for the Kaggle inference
+        notebook. xgb models are saved with device="cpu" so they predict cleanly on a CPU
+        inference kernel (avoids the cuda↔cpu "mismatched devices" fallback).
     """
-    t0 = time.time()
     gpu = _gpu_available() if use_gpu == "auto" else bool(use_gpu)
+    if gpu and algo in ("xgb", "cat"):
+        try:
+            return _train_impl(version, algo, X, y, groups, X_test,
+                               params, n_folds, save, fit_full, gpu=True)
+        except Exception as e:
+            print(f"[train] GPU run failed ({type(e).__name__}: {e}) — falling back to CPU")
+    return _train_impl(version, algo, X, y, groups, X_test,
+                       params, n_folds, save, fit_full, gpu=False)
+
+
+def _train_impl(version, algo, X, y, groups, X_test, params, n_folds, save, fit_full, *, gpu):
+    t0 = time.time()
     defaults = {"lgb": _lgb_defaults, "xgb": _xgb_defaults, "cat": _cat_defaults}[algo](gpu)
     defaults.update(params or {})
     dev = "GPU" if (gpu and algo in ("xgb", "cat")) else "CPU"
@@ -181,6 +194,8 @@ def train_variant(
         full_params[_n_est_key(algo)] = max(50, int(np.mean(best_iters) * 1.1))
         full = _make_model(algo, full_params)
         full.fit(X, y) if algo != "xgb" else full.fit(X, y, verbose=False)
+        if algo == "xgb":
+            full.set_params(device="cpu")   # portable: Kaggle inference kernel may be CPU
         d = PROBS / version
         d.mkdir(parents=True, exist_ok=True)
         joblib.dump(full, d / "model_full.pkl")
