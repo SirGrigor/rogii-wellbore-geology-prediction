@@ -67,7 +67,7 @@ def main() -> None:
     feats = [c for c in dev_df.columns if c not in {"well", "id", "target"}]
     # float32 to halve RAM; subsample dev TRAIN rows (consecutive 1-ft samples in a well are
     # near-duplicates → every-Nth keeps signal, fixes the 3M-row xgb-DMatrix OOM on 12.7GB).
-    stride = int(os.environ.get("ROGII_ROW_STRIDE") or 2)
+    stride = int(os.environ.get("ROGII_ROW_STRIDE") or 8)   # ~380K rows — safe margin; plenty to measure
     X = dev_df[feats].iloc[::stride].astype("float32")
     y = dev_df["target"].to_numpy(np.float32)[::stride]
     g = dev_df["well"].to_numpy()[::stride]

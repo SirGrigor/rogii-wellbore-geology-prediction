@@ -26,7 +26,7 @@ COMP = "rogii-wellbore-geology-prediction"
 GH_REPO = "SirGrigor/rogii-wellbore-geology-prediction"
 KPU_GIT = "git+https://github.com/SirGrigor/kaggle-playground-utils.git"
 DEPS = ["numpy", "pandas", "scipy", "scikit-learn", "pyarrow", "lightgbm", "xgboost",
-        "matplotlib", "seaborn", "dtaidistance", "joblib", "numba", "catboost", "torch"]
+        "matplotlib", "seaborn", "dtaidistance", "joblib", "numba", "catboost"]
 ARTIFACT_DIRS = ("probs", "submissions")
 
 DRY = "--dry-run" in sys.argv
@@ -140,20 +140,14 @@ def gpu_verify() -> None:
     GPU use was its torch NN models, not its GBDTs)."""
     print("=" * 64)
     has_proc = os.path.exists("/proc/driver/nvidia/version")
-    cuda = False
+    # NOTE: do NOT import torch here — it pins a ~2-3GB CUDA context in this (parent) process
+    # for the whole run, starving the training subprocess's RAM. nvidia-smi + /proc prove the GPU.
     if not DRY:
-        try:
-            import torch
-            cuda = torch.cuda.is_available()
-            dev = torch.cuda.get_device_name(0) if cuda else "CPU"
-            print(f"[GPU] torch {torch.__version__}  CUDA={cuda}  device={dev}")
-        except Exception as e:
-            print(f"[GPU] torch check failed: {e}")
         subprocess.run("nvidia-smi -L 2>/dev/null || echo '[GPU] nvidia-smi: no GPU'", shell=True)
     print(f"[GPU] /proc/driver/nvidia={has_proc}  → GBDT path: "
-          f"{'xgb device=cuda (GPU)' if (cuda or has_proc) else 'CPU (no GPU attached)'}")
+          f"{'GPU available (xgb device=cuda)' if has_proc else 'CPU (no GPU attached)'}")
     print("=" * 64)
-    if not DRY and not (cuda or has_proc) and os.environ.get("ROGII_ALLOW_CPU") != "1":
+    if not DRY and not has_proc and os.environ.get("ROGII_ALLOW_CPU") != "1":
         raise SystemExit(
             "\n*** NO GPU ATTACHED to this Colab runtime. ***\n"
             "Runtime → Change runtime type → T4 GPU → Save (it reconnects), then re-run.\n"
