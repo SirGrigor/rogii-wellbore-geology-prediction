@@ -59,6 +59,13 @@ The S6E5 endgame was almost entirely about blending. The lessons, ranked by how 
   level across wells) vs the ~12 ft floor. `features.build_dataset(target="residual")` does this by
   default and returns `anchor`; de-residualize with `tvt_pred = drift_pred + anchor`. Floor
   (carry-forward, Δ=0) = 15.91 ft — the baseline to beat.
+- **Polyfit local-dip feature (`np.polyfit`, not a model — complements the GBDT).** Trees can't
+  extrapolate the level; a polynomial can capture the prefix dip trend. VERIFIED on 773 wells:
+  full TVT-vs-MD extrapolation is *worse* than carry-forward globally (diverges downhole), BUT the
+  prefix dip-slope beats carry-forward in the first ~100 ft past PS (1.26 vs 1.79). So it's a
+  **feature, not an anchor**: `features._poly_dip` emits `poly_slope` + `poly_drift`, and the model
+  uses `md_from_ps` to trust them near PS and discount them downhole. (The fact that geometric
+  extrapolation fails far out reconfirms post-PS TVT is geology-driven → GR-alignment is the lever.)
 - **Target transform** (`TransformedTargetRegressor` + Yeo-Johnson/PowerTransformer) on Δ if its
   distribution is skewed; always invert for the metric.
 - **BayesianRidge meta-learner** for stacking OOF predictions (S5E9 winner's meta).

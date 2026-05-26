@@ -64,6 +64,33 @@ def _anchor(df: pd.DataFrame) -> pd.DataFrame:
     }, index=df.index)
 
 
+def _poly_dip(df: pd.DataFrame, k: int = 100, deg: int = 1) -> pd.DataFrame:
+    """Local geometric-dip signal from the known prefix (np.polyfit, analytical).
+
+    Fits TVT-vs-MD on the last `k` known (pre-PS) samples and extrapolates the trend.
+    Verified: this BEATS carry-forward only very near PS (first ~100 ft) and diverges
+    far out — so it's a *feature*, not an anchor. The model combines `poly_drift` with
+    `md_from_ps` to trust it near PS and discount it downhole.
+      poly_slope : local dip (TVT per ft of MD), constant per well
+      poly_drift : slope * (MD - MD_ps) — the dip-extrapolated drift from the anchor
+    """
+    ps = data.ps_index(df)
+    md = df[DEPTH_COL].to_numpy(dtype=float)
+    n = len(df)
+    if ps >= 5:
+        lo = max(0, ps - k)
+        tvt_known = df[TVT_INPUT_COL].to_numpy(dtype=float)[lo:ps]   # = true TVT on prefix
+        try:
+            slope = float(np.polyfit(md[lo:ps], tvt_known, deg)[deg - 1] if deg == 1
+                          else np.polyfit(md[lo:ps], tvt_known, 1)[0])
+        except Exception:
+            slope = 0.0
+        md_ps = md[ps - 1]
+    else:
+        slope, md_ps = 0.0, md[0]
+    return pd.DataFrame({"poly_slope": slope, "poly_drift": slope * (md - md_ps)}, index=df.index)
+
+
 def build_well_features(horiz_df: pd.DataFrame, typewell_df: pd.DataFrame,
                         *, with_alignment: bool = True) -> pd.DataFrame:
     """Full per-row feature frame for ONE well, aligned to horiz_df.index."""
@@ -71,7 +98,7 @@ def build_well_features(horiz_df: pd.DataFrame, typewell_df: pd.DataFrame,
     df[WELL_ID] = df.get(WELL_ID, "w")        # sequence helpers group by WELL_ID
     df[GR] = align.fill_gr(df[GR])            # GR ~29% NaN → fill before sequence FE
 
-    parts = [_trajectory(horiz_df), _anchor(horiz_df)]
+    parts = [_trajectory(horiz_df), _anchor(horiz_df), _poly_dip(horiz_df)]
 
     seq = fs.add_well_position(df)
     seq = fs.add_rolling(seq, [GR], windows=(5, 15, 31))
