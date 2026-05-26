@@ -187,7 +187,9 @@ print('--- data/raw ---')
     md("## 6. Run the target script"),
     code("""print(f'RUNNING: {SCRIPT}  {EXTRA_ARGS}')
 import os; print('cwd:', os.getcwd())
-!python {SCRIPT} {EXTRA_ARGS}
+# PYTHONPATH=repo-root so `from src import ...` works WITHOUT installing rogii
+# (the runner intentionally doesn't `pip install -e .` — its tool deps are local paths).
+!PYTHONPATH=$(pwd) python {SCRIPT} {EXTRA_ARGS}
 """),
     md("## 7. Sync artifacts → Drive"),
     code(f"""import os, shutil
