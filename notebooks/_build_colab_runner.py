@@ -54,23 +54,32 @@ DRIVE_ROOT = '{DRIVE}'
 !mkdir -p "$DRIVE_ROOT"
 !ls -la "$DRIVE_ROOT" || echo 'Drive folder created (empty).'
 
-# --- Kaggle CLI auth from Colab Secrets (key icon, left sidebar) ---
+# --- Kaggle auth from Colab Secrets (🔑 icon, left sidebar; toggle notebook access ON) ---
+# kaggle CLI 2.x uses KAGGLE_API_TOKEN as a standalone bearer token (NO username needed) —
+# that's what works locally. Set it directly. Fall back to old KAGGLE_USERNAME+KAGGLE_KEY if present.
 import os, json
 try:
     from google.colab import userdata
-    username = userdata.get('KAGGLE_USERNAME')
-    api_token = userdata.get('KAGGLE_API_TOKEN')
-    if api_token and api_token.strip().startswith('{{'):
-        parsed = json.loads(api_token)
-        api_token = parsed.get('key', api_token)
-        username = username or parsed.get('username')
-    if not username or not api_token:
-        raise ValueError('missing username or token')
-    os.environ['KAGGLE_USERNAME'] = username
-    os.environ['KAGGLE_KEY'] = api_token
-    print(f'✓ Kaggle auth set (user: {{username}})')
+    def _secret(name):
+        try: return userdata.get(name)
+        except Exception: return None
+    api_token = _secret('KAGGLE_API_TOKEN')
+    username  = _secret('KAGGLE_USERNAME')
+    key       = _secret('KAGGLE_KEY')
+    if api_token and api_token.strip().startswith('{{'):   # someone pasted kaggle.json
+        p = json.loads(api_token); username = username or p.get('username'); key = key or p.get('key')
+        api_token = p.get('key', api_token)
+    if api_token:
+        os.environ['KAGGLE_API_TOKEN'] = api_token         # 2.x bearer auth (primary)
+    if username and (key or api_token):
+        os.environ['KAGGLE_USERNAME'] = username           # 1.x fallback
+        os.environ['KAGGLE_KEY'] = key or api_token
+    if not (api_token or (username and key)):
+        raise ValueError('no KAGGLE_API_TOKEN (or KAGGLE_USERNAME+KAGGLE_KEY) secret found')
+    print('✓ Kaggle auth set' + (f' (user: {{username}})' if username else ' (KAGGLE_API_TOKEN bearer)'))
 except Exception as exc:
-    print(f'⚠ Kaggle auth skipped: {{exc}} — set KAGGLE_USERNAME + KAGGLE_API_TOKEN in Colab Secrets.')
+    print(f'⚠ Kaggle auth skipped: {{exc}}\\n  Add a Colab Secret named KAGGLE_API_TOKEN (your 37-char '
+          'token, notebook access ON). KAGGLE_USERNAME is NOT required for kaggle 2.x.')
 """),
     md("## 2. Clone repo + check out latest"),
     code(f"""%cd /content
@@ -124,6 +133,7 @@ NEEDS_OPTUNA   = 'optuna' in s
 NEEDS_TORCH    = 'torch' in s or NEEDS_PYTABKIT
 
 !pip install -q uv
+!pip install -q -U kaggle          # Colab ships an old kaggle; 2.x is needed for KAGGLE_API_TOKEN bearer auth
 
 # Base deps + the shared toolkit from GitHub (public). NOT `-e .` — see the note above.
 base = ['numpy', 'pandas', 'scipy', 'scikit-learn', 'pyarrow', 'lightgbm', 'xgboost',
