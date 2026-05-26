@@ -6,6 +6,9 @@ Metric: **RMSE** (↓ better). Source of truth: `experiments.jsonl` (git-tracked
 
 | ver | parent | predicted Δ | actual Δ | holdout RMSE | OOF RMSE | gap | hypothesis | flags |
 |---|---|---|---|---|---|---|---|---|
+| [v0_floor](versions/v0_floor.md) | `—` | +0.00000 | — | 15.90985 | 15.90985 | +0.00000 | Carry-forward last-known TVT across the post-PS region is the naive... | ⚠ fold_collapse, fold_instability |
+| [v2_geom](versions/v2_geom.md) | `v0_floor` | +0.30000 | +0.59026 | 15.31959 | 15.31959 | +0.00000 | Geometry-only residual model (no alignment) — judged on the sacred ... | ⚠ fold_collapse |
+| [v2_geom_align](versions/v2_geom_align.md) | `v2_geom` | +0.30000 | +0.14401 | 15.17557 | 15.17557 | +0.00000 | Add naive-DTW alignment back on top of geometry — judged on the sac... | ⚠ fold_collapse, prediction_undershot |
 
 ## Commands
 ```
