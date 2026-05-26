@@ -41,28 +41,23 @@ from pathlib import Path
 import numpy as np
 
 def _locate_src():
-    # (a) an extracted src/ folder anywhere under /kaggle/input
-    h = glob.glob("/kaggle/input/**/src/kernel9251.py", recursive=True)
-    if h:
-        return Path(h[0]).parents[1]
-    # (b) a zip in the code dataset → extract, then handle src/-prefixed OR flat layout
-    work = "/kaggle/working/_code"; shutil.rmtree(work, ignore_errors=True); os.makedirs(work)
-    for z in glob.glob("/kaggle/input/**/*.zip", recursive=True):
-        try: zipfile.ZipFile(z).extractall(work)
-        except Exception: pass
-    h = glob.glob(f"{{work}}/**/src/kernel9251.py", recursive=True)
-    if h:
-        return Path(h[0]).parents[1]
-    h = glob.glob(f"{{work}}/**/kernel9251.py", recursive=True)
-    if h:                                                  # flat → wrap the .py files into a src/ package
-        pkg = Path(h[0]).parent; srcdir = Path(work) / "src"; srcdir.mkdir(exist_ok=True)
-        for f in pkg.glob("*.py"): shutil.copy(f, srcdir / f.name)
-        return Path(work)
-    return None
+    # find kernel9251.py anywhere under /kaggle/input (flat files, a src/ folder, or...)
+    h = glob.glob("/kaggle/input/**/kernel9251.py", recursive=True)
+    if not h:                                              # ...inside a zip → extract first
+        work = "/kaggle/working/_z"; shutil.rmtree(work, ignore_errors=True); os.makedirs(work)
+        for z in glob.glob("/kaggle/input/**/*.zip", recursive=True):
+            try: zipfile.ZipFile(z).extractall(work)
+            except Exception: pass
+        h = glob.glob(f"{{work}}/**/kernel9251.py", recursive=True)
+    assert h, "rogii-code not found — attach the dataset with the src .py files"
+    # re-package all the .py into a clean src/ package so `import src` works (any input layout)
+    pkg = Path(h[0]).parent
+    srcdir = Path("/kaggle/working/src"); shutil.rmtree(srcdir, ignore_errors=True); srcdir.mkdir(parents=True)
+    for f in pkg.glob("*.py"): shutil.copy(f, srcdir / f.name)
+    return Path("/kaggle/working")
 
 root = _locate_src()
-assert root, "code not found — attach the rogii-code dataset (src/ or src.zip)"
-sys.path.insert(0, str(root)); print("src from:", root)
+sys.path.insert(0, str(root)); print("src from:", root, "| files:", len(list((root/'src').glob('*.py'))))
 os.environ["ROGII_DATA_DIR"] = "/kaggle/input/{COMP}"     # so src.data reads the comp data
 import joblib                                              # noqa: E402
 from src import cv, data, kernel9251 as k9, submission     # noqa: E402
