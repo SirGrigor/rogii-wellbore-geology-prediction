@@ -13,7 +13,6 @@ tells Tier 1 where the signal is (and whether the alignment recipe is the bottle
 """
 from __future__ import annotations
 
-import os
 import time
 
 import numpy as np
@@ -23,7 +22,7 @@ from src.evaluate import rmse
 from src.observer import Experiment
 
 
-ALGO = os.environ.get("ROGII_ALGO", "lgb")   # "xgb" for the reliable Colab-GPU path
+ALGO = train.default_algo()   # xgb (GPU) when a GPU is present, else lgb; ROGII_ALGO overrides
 
 
 def main() -> None:

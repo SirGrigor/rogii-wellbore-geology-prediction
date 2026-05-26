@@ -12,7 +12,6 @@ Run on Colab via colab_runner. Set ROGII_ALGO=xgb for the GPU path.
 """
 from __future__ import annotations
 
-import os
 import time
 
 import joblib
@@ -22,7 +21,7 @@ from src import cv, data, features, train
 from src.evaluate import rmse
 from src.observer import Experiment
 
-ALGO = os.environ.get("ROGII_ALGO", "lgb")
+ALGO = train.default_algo()   # xgb (GPU) when a GPU is present, else lgb; ROGII_ALGO overrides
 
 
 def _sacred_rmse(version: str, X_sac, anchor_sac, y_tvt_sac) -> float:

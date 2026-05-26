@@ -53,6 +53,20 @@ def _gpu_available() -> bool:
         return False
 
 
+def default_algo() -> str:
+    """Pick the algo: a GPU-capable one (xgb) when a GPU is present, else lgb (CPU).
+
+    LightGBM's Colab pip wheel has no GPU build, so on a T4 we default to **xgb**
+    (device="cuda") to actually use the GPU — no manual env needed. Override with
+    the ROGII_ALGO env var ("lgb" | "xgb" | "cat").
+    """
+    import os
+    env = os.environ.get("ROGII_ALGO")
+    if env:
+        return env
+    return "xgb" if _gpu_available() else "lgb"
+
+
 # GPU note: xgb (device="cuda") + cat (task_type="GPU") are reliable on Colab T4.
 # LightGBM GPU on Colab needs a special build and is unreliable, so lgb stays CPU —
 # early stopping keeps it fast. For a GPU run prefer algo="xgb".
