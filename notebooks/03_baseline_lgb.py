@@ -17,7 +17,7 @@ import time
 
 import numpy as np
 
-from src import features, submission, train
+from src import cv, data, features, submission, train
 from src.evaluate import rmse
 from src.observer import Experiment
 
@@ -37,14 +37,21 @@ def main() -> None:
         cloud_or_local="cloud",
     )
 
-    print("building train features (residual target)...")
-    tr = features.build_dataset("train", with_alignment=True, target="residual")
+    # Sacred well-holdout: CV/train on dev wells only; sacred wells are an honest final
+    # check, never tuned to (the 3-well LB is noise — handover §0/§7).
+    dev_wells, sacred_wells = cv.sacred_split(data.list_well_ids("train"))
+    print(f"dev wells {len(dev_wells)} | sacred wells {len(sacred_wells)} (untouched until final check)")
+
+    print("building dev features (residual target)...")
+    tr = features.build_dataset("train", well_ids=dev_wells, with_alignment=True, target="residual")
     X, y_drift, groups, anchor = tr["X"], tr["y"], tr["groups"], tr["anchor"]
     tvt_true = y_drift + anchor
-    floor_rmse = rmse(tvt_true, anchor)                 # Δ=0 carry-forward floor on full data
-    print(f"X {X.shape} | floor RMSE {floor_rmse:.4f} ft")
+    floor_rmse = rmse(tvt_true, anchor)                 # Δ=0 carry-forward floor on dev wells
+    print(f"X {X.shape} | dev floor RMSE {floor_rmse:.4f} ft")
 
-    print("building test features...")
+    print("building sacred + test features...")
+    sac = features.build_dataset("train", well_ids=sacred_wells, with_alignment=True, target="residual")
+    X_sac, y_sac, sac_anchor = sac["X"], sac["y"], sac["anchor"]
     te = features.build_dataset("test", with_alignment=True, target="residual")
     X_test, test_anchor, test_groups = te["X"], te["anchor"], te["groups"]
 
@@ -54,12 +61,16 @@ def main() -> None:
     # de-residualize: TVT = drift + anchor; metric RMSE on absolute TVT
     tvt_oof = res.oof + anchor
     oof_rmse = rmse(tvt_true, tvt_oof)
-    # per-fold metric RMSE (de-residualized) is what train logged as drift-RMSE; recompute on TVT
-    print(f"OOF drift-RMSE {res.oof_rmse:.4f} | OOF TVT-RMSE {oof_rmse:.4f} (floor {floor_rmse:.4f})")
-
-    # feature importances → Tier-1 guidance (where is the signal? is alignment the bottleneck?)
+    # honest sacred-well check using the full-fit model (never tuned to these wells)
     import joblib
     full = joblib.load(train.PROBS / "v1_lgb_resid" / "model_full.pkl")
+    tvt_sac = full.predict(X_sac) + sac_anchor
+    sacred_rmse = rmse(y_sac + sac_anchor, tvt_sac)
+    sacred_floor = rmse(y_sac + sac_anchor, sac_anchor)
+    print(f"OOF drift-RMSE {res.oof_rmse:.4f} | OOF TVT-RMSE {oof_rmse:.4f} (dev floor {floor_rmse:.4f})")
+    print(f"SACRED TVT-RMSE {sacred_rmse:.4f} (sacred floor {sacred_floor:.4f}) — the honest number")
+
+    # feature importances → Tier-1 guidance (where is the signal? is alignment the bottleneck?)
     imp = sorted(zip(X.columns, full.feature_importances_), key=lambda kv: -kv[1])
     print("top 12 features by gain:")
     for name, g in imp[:12]:
@@ -77,7 +88,8 @@ def main() -> None:
         oof_score_per_fold=res.fold_rmses,   # NOTE: drift-RMSE per fold (≈ TVT-RMSE since anchor const/well)
         holdout_score=oof_rmse,
         runtime_sec=time.time() - t0,
-        extra={"floor_rmse": floor_rmse, "n_train_wells": len(tr["well_ids"]),
+        extra={"floor_rmse": floor_rmse, "sacred_rmse": sacred_rmse, "sacred_floor": sacred_floor,
+               "n_dev_wells": len(dev_wells), "n_sacred_wells": len(sacred_wells),
                "submission": out.name, "model": "probs/v1_lgb_resid/model_full.pkl"},
     )
     exp.note(f"floor {floor_rmse:.3f} -> OOF {oof_rmse:.3f} ft ({'beats' if oof_rmse < floor_rmse else 'TRAILS'} floor)")
