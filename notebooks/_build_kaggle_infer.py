@@ -33,11 +33,19 @@ cells = [
 Run **on Kaggle** (internet OFF) → writes `/kaggle/working/submission.csv` → **Submit to Competition**.
 Attach: the competition data + **`rogii-code`** (repo `src/`) + **`rogii-models`** (probs/v5_lgb0, v5_cat3,
 v5_cat4, v5_cat5 — each contains model_full.pkl). See docs/submission_workflow.md."""),
-    md("## 1. Code on path + data location"),
-    code(f"""import sys, os, glob, joblib
+    md("## 1. Code on path + data location\n\n"
+       "Auto-locates `src/` under /kaggle/input — works whether `rogii-code` is a manual `src/` upload "
+       "OR a **GitHub-repo import** (which nests it under a `<repo>-main/` folder)."),
+    code(f"""import sys, os, glob
+from pathlib import Path
 import numpy as np
-sys.path.insert(0, "/kaggle/input/rogii-code")            # dataset root containing the `src` folder
+# find src/ anywhere under /kaggle/input (robust to GitHub-archive nesting)
+_src = glob.glob("/kaggle/input/**/src/kernel9251.py", recursive=True)
+assert _src, "code not found — attach rogii-code (GitHub import of the repo URL, or upload src/)"
+sys.path.insert(0, str(Path(_src[0]).parents[1]))         # parent of src/
+print("src from:", Path(_src[0]).parents[1])
 os.environ["ROGII_DATA_DIR"] = "/kaggle/input/{COMP}"     # so src.data reads the comp data
+import joblib                                              # noqa: E402
 from src import cv, data, kernel9251 as k9, submission     # noqa: E402
 from src.config import TRAIN_DIR                            # noqa: E402
 print("test wells:", data.list_well_ids("test"))
