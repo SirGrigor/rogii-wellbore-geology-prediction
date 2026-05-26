@@ -60,13 +60,18 @@ def main() -> None:
     dev_df = _build("dev_k9" + sfx, dev, True)
     sac_df = _build("sacred_k9" + sfx, sacred, True)
     feats = [c for c in dev_df.columns if c not in {"well", "id", "target"}]
-    # float32 to halve RAM (3M x 222 float64 ~5GB x fold-copies OOM'd Colab's 13GB)
-    X = dev_df[feats].astype("float32")
-    y, g = dev_df["target"].to_numpy(np.float32), dev_df["well"].to_numpy()
-    Xs, ys = sac_df[feats].astype("float32"), sac_df["target"].to_numpy(np.float32)
+    # float32 to halve RAM; subsample dev TRAIN rows (consecutive 1-ft samples in a well are
+    # near-duplicates → every-Nth keeps signal, fixes the 3M-row xgb-DMatrix OOM on 12.7GB).
+    stride = int(os.environ.get("ROGII_ROW_STRIDE") or 2)
+    X = dev_df[feats].iloc[::stride].astype("float32")
+    y = dev_df["target"].to_numpy(np.float32)[::stride]
+    g = dev_df["well"].to_numpy()[::stride]
+    Xs, ys = sac_df[feats].astype("float32"), sac_df["target"].to_numpy(np.float32)  # sacred FULL
+    full_y = dev_df["target"].to_numpy(np.float32)
     del dev_df, sac_df; gc.collect()
-    dev_floor, sac_floor = rmse(np.zeros_like(y), y), rmse(np.zeros_like(ys), ys)
-    print(f"X {X.shape} ({ALGO}) | {len(feats)} features | dev_floor {dev_floor:.3f} sac_floor {sac_floor:.3f}")
+    dev_floor, sac_floor = rmse(np.zeros_like(full_y), full_y), rmse(np.zeros_like(ys), ys)
+    print(f"X {X.shape} (stride {stride}, {ALGO}) | {len(feats)} features | "
+          f"dev_floor {dev_floor:.3f} sac_floor {sac_floor:.3f}")
 
     exp = Experiment.start(
         version="v4_kernel9251", parent="v0_floor",
