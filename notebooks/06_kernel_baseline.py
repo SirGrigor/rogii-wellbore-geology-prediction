@@ -27,7 +27,12 @@ from src.observer import Experiment
 
 # Cache the expensive FE in DRIVE (survives the bootstrap's repo re-clone); local fallback.
 CACHE = Path(os.environ.get("DRIVE_ROOT") or "data") / "cache"
-ALGO = train.default_algo()   # xgb on GPU (T4) — avoids the lgb-CPU OOM + actually uses the GPU
+# LGB by default: it BINS the data (~1 byte/feature → ~330MB) so it won't OOM like xgb's dense
+# DMatrix did on 12.7GB — and it's the kernel's own model + generalizes better here. (GPU is
+# confirmed available; xgb-GPU via QuantileDMatrix is a later memory-efficient option.)
+ALGO = os.environ.get("ROGII_ALGO") or "lgb"
+LGB_PARAMS = dict(num_leaves=255, min_child_samples=15, subsample=0.8, subsample_freq=1,
+                  colsample_bytree=0.8, reg_lambda=3.0, reg_alpha=0.05, learning_rate=0.025)
 
 
 def _build(label, wells, is_train):
@@ -82,6 +87,7 @@ def main() -> None:
         cloud_or_local="cloud")
 
     res = train.train_variant("v4_kernel9251", ALGO, X, y, g,
+                              params=LGB_PARAMS if ALGO == "lgb" else None,
                               save=True, fit_full=True, use_gpu="auto")
     full = joblib.load(train.PROBS / "v4_kernel9251" / "model_full.pkl")
     sac_pred = full.predict(Xs)
