@@ -26,7 +26,7 @@ COMP = "rogii-wellbore-geology-prediction"
 GH_REPO = "SirGrigor/rogii-wellbore-geology-prediction"
 KPU_GIT = "git+https://github.com/SirGrigor/kaggle-playground-utils.git"
 DEPS = ["numpy", "pandas", "scipy", "scikit-learn", "pyarrow", "lightgbm", "xgboost",
-        "matplotlib", "seaborn", "dtaidistance", "joblib", "numba", "catboost"]
+        "matplotlib", "seaborn", "dtaidistance", "joblib", "numba", "catboost", "torch"]
 ARTIFACT_DIRS = ("probs", "submissions")
 
 DRY = "--dry-run" in sys.argv
@@ -130,23 +130,40 @@ def push_diary_to_git() -> None:
           else f"  ⚠ diary push failed (rc={r.returncode}): {r.stderr.strip()[:200]}")
 
 
-def gpu_banner() -> None:
-    """Print whether a GPU is detected (and which) so it's visible in the log."""
-    import shutil
+def gpu_verify() -> None:
+    """S6E5-style LOUD GPU verification (run AFTER install, so torch is present).
+
+    Prints torch CUDA + device name + nvidia-smi, exactly like S6E5's install cell, so the
+    GPU status is unmistakable every run. If no GPU and ROGII_ALLOW_CPU != 1, ABORT here —
+    fail fast (don't burn the 86-min FE then train on CPU). xgb device=cuda is the only
+    working Colab-GPU GBDT path (lgb's pip wheel has no GPU build; that's why S6E5's visible
+    GPU use was its torch NN models, not its GBDTs)."""
+    print("=" * 64)
     has_proc = os.path.exists("/proc/driver/nvidia/version")
-    smi = shutil.which("nvidia-smi") or next(
-        (p for p in ("/usr/bin/nvidia-smi", "/opt/bin/nvidia-smi") if os.path.exists(p)), None)
-    print(f"[0] GPU: /proc/driver/nvidia={has_proc}, nvidia-smi={smi}")
-    if smi and not DRY:
-        subprocess.run([smi, "-L"], check=False)
-    print("    → algo will be xgb (device=cuda) if a GPU is detected, else lgb (CPU). "
-          "Set ROGII_ALGO to override.")
+    cuda = False
+    if not DRY:
+        try:
+            import torch
+            cuda = torch.cuda.is_available()
+            dev = torch.cuda.get_device_name(0) if cuda else "CPU"
+            print(f"[GPU] torch {torch.__version__}  CUDA={cuda}  device={dev}")
+        except Exception as e:
+            print(f"[GPU] torch check failed: {e}")
+        subprocess.run("nvidia-smi -L 2>/dev/null || echo '[GPU] nvidia-smi: no GPU'", shell=True)
+    print(f"[GPU] /proc/driver/nvidia={has_proc}  → GBDT path: "
+          f"{'xgb device=cuda (GPU)' if (cuda or has_proc) else 'CPU (no GPU attached)'}")
+    print("=" * 64)
+    if not DRY and not (cuda or has_proc) and os.environ.get("ROGII_ALLOW_CPU") != "1":
+        raise SystemExit(
+            "\n*** NO GPU ATTACHED to this Colab runtime. ***\n"
+            "Runtime → Change runtime type → T4 GPU → Save (it reconnects), then re-run.\n"
+            "Verify with `!nvidia-smi` first. To run on CPU anyway: set ROGII_ALLOW_CPU=1.\n")
 
 
 def main() -> None:
     print(f"=== rogii Colab bootstrap (root={ROOT}{' DRY-RUN' if DRY else ''}) ===")
-    gpu_banner()
     install()
+    gpu_verify()
     get_data()
     pull_artifacts()
     run_script()
