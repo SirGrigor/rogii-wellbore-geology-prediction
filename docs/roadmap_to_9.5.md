@@ -34,6 +34,7 @@ Expected deltas are HYPOTHESES (the kernels give no ablation) — the point is t
 | stage | component(s) | why it should generalize | expected sacred | measured |
 |---|---|---|---|---|
 | now | geometry + naive-align + self-corr (xgb) | — | 15.2 (lgb 14.45) | ✔ 15.18 / 14.45 |
+| **M1 (A)** | **ported 9.251 engine (222 feats), single LGB, stride-8 (380K rows)** | PF-momentum + spatial imputers + DTW/beam + slope, stacked under a GBDT | ≤13.5 | **✅ 9.490 (Δfloor −4.59) — broke floor, at target, near public-best 9.251** |
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
