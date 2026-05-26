@@ -36,14 +36,33 @@ v5_cat4, v5_cat5 — each contains model_full.pkl). See docs/submission_workflow
     md("## 1. Code on path + data location\n\n"
        "Auto-locates `src/` under /kaggle/input — works whether `rogii-code` is a manual `src/` upload "
        "OR a **GitHub-repo import** (which nests it under a `<repo>-main/` folder)."),
-    code(f"""import sys, os, glob
+    code(f"""import sys, os, glob, zipfile, shutil
 from pathlib import Path
 import numpy as np
-# find src/ anywhere under /kaggle/input (robust to GitHub-archive nesting)
-_src = glob.glob("/kaggle/input/**/src/kernel9251.py", recursive=True)
-assert _src, "code not found — attach rogii-code (GitHub import of the repo URL, or upload src/)"
-sys.path.insert(0, str(Path(_src[0]).parents[1]))         # parent of src/
-print("src from:", Path(_src[0]).parents[1])
+
+def _locate_src():
+    # (a) an extracted src/ folder anywhere under /kaggle/input
+    h = glob.glob("/kaggle/input/**/src/kernel9251.py", recursive=True)
+    if h:
+        return Path(h[0]).parents[1]
+    # (b) a zip in the code dataset → extract, then handle src/-prefixed OR flat layout
+    work = "/kaggle/working/_code"; shutil.rmtree(work, ignore_errors=True); os.makedirs(work)
+    for z in glob.glob("/kaggle/input/**/*.zip", recursive=True):
+        try: zipfile.ZipFile(z).extractall(work)
+        except Exception: pass
+    h = glob.glob(f"{{work}}/**/src/kernel9251.py", recursive=True)
+    if h:
+        return Path(h[0]).parents[1]
+    h = glob.glob(f"{{work}}/**/kernel9251.py", recursive=True)
+    if h:                                                  # flat → wrap the .py files into a src/ package
+        pkg = Path(h[0]).parent; srcdir = Path(work) / "src"; srcdir.mkdir(exist_ok=True)
+        for f in pkg.glob("*.py"): shutil.copy(f, srcdir / f.name)
+        return Path(work)
+    return None
+
+root = _locate_src()
+assert root, "code not found — attach the rogii-code dataset (src/ or src.zip)"
+sys.path.insert(0, str(root)); print("src from:", root)
 os.environ["ROGII_DATA_DIR"] = "/kaggle/input/{COMP}"     # so src.data reads the comp data
 import joblib                                              # noqa: E402
 from src import cv, data, kernel9251 as k9, submission     # noqa: E402
