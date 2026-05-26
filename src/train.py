@@ -139,6 +139,8 @@ def _fit_predict(algo: str, params: dict, Xtr, ytr, Xva, yva, Xte):
         m = xgb.XGBRegressor(**params, early_stopping_rounds=EARLY_STOPPING_ROUNDS)
         m.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
         best = (m.best_iteration or params[_n_est_key(algo)]) + 1
+        if str(params.get("device", "")).startswith("cuda"):
+            m.set_params(device="cpu")   # predict on CPU (inputs are CPU) → no device-mismatch warning/fallback
     else:  # cat
         m = _make_model(algo, params)
         m.fit(Xtr, ytr, eval_set=(Xva, yva), early_stopping_rounds=EARLY_STOPPING_ROUNDS, verbose=False)
