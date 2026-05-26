@@ -23,6 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 COMP = "rogii-wellbore-geology-prediction"
+GH_REPO = "SirGrigor/rogii-wellbore-geology-prediction"
 KPU_GIT = "git+https://github.com/SirGrigor/kaggle-playground-utils.git"
 DEPS = ["numpy", "pandas", "scipy", "scikit-learn", "pyarrow", "lightgbm", "xgboost",
         "matplotlib", "seaborn", "dtaidistance", "joblib"]
@@ -100,6 +101,35 @@ def push_artifacts() -> None:
         shutil.copy(src, Path(drive) / "experiments.jsonl")
 
 
+def push_diary_to_git() -> None:
+    """Persist the experiment diary to git (the source of truth) — needs GH_TOKEN.
+
+    Colab runs append to the ephemeral clone's experiments.jsonl; without this the diary
+    never reaches git. With a GH_TOKEN secret (fine-grained PAT, Contents:RW on this repo),
+    render the diary + commit experiments.jsonl/docs and push to master. The token is never
+    printed and never written to the on-disk remote config.
+    """
+    token = os.environ.get("GH_TOKEN")
+    print(f"[6] persist diary to git ({'GH_TOKEN set' if token else 'no GH_TOKEN — diary stays on Drive only; skip'})")
+    if not token or DRY:
+        if DRY:
+            print("  would: render diary, commit experiments.jsonl + docs/diary.md, push HEAD:master")
+        return
+    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    subprocess.run([sys.executable, "-m", "src.diary", "render"], cwd=str(ROOT), env=env, check=False)
+    for c in ('git config user.email "colab@rogii.bootstrap"',
+              'git config user.name "rogii-colab-bootstrap"',
+              "git add experiments.jsonl docs/diary.md docs/versions 2>/dev/null",
+              'git diff --cached --quiet || git commit -q -m "diary: Colab run"',
+              "git pull --rebase -q origin master"):
+        subprocess.run(c, shell=True, cwd=str(ROOT), check=False)
+    # push with the token inline (list args → not shell-echoed; URL kept out of logs)
+    r = subprocess.run(["git", "push", "-q", f"https://{token}@github.com/{GH_REPO}.git", "HEAD:master"],
+                       cwd=str(ROOT), capture_output=True, text=True)
+    print("  ✓ diary pushed to git" if r.returncode == 0
+          else f"  ⚠ diary push failed (rc={r.returncode}): {r.stderr.strip()[:200]}")
+
+
 def main() -> None:
     print(f"=== rogii Colab bootstrap (root={ROOT}{' DRY-RUN' if DRY else ''}) ===")
     install()
@@ -107,6 +137,7 @@ def main() -> None:
     pull_artifacts()
     run_script()
     push_artifacts()
+    push_diary_to_git()
     print("=== done ===")
 
 

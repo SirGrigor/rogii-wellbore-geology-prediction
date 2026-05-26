@@ -43,17 +43,21 @@ drive.mount('/content/drive')
 os.environ['DRIVE_ROOT'] = '{DRIVE}'        # bootstrap syncs artifacts here
 os.makedirs(os.environ['DRIVE_ROOT'], exist_ok=True)
 
-# kaggle 2.x: KAGGLE_API_TOKEN is a standalone bearer token (no username needed).
-try:
-    from google.colab import userdata
-    tok = userdata.get('KAGGLE_API_TOKEN')
-    if tok:
-        os.environ['KAGGLE_API_TOKEN'] = tok
-        print('✓ KAGGLE_API_TOKEN set')
-    else:
-        print('⚠ KAGGLE_API_TOKEN secret is empty')
-except Exception as e:
-    print(f'⚠ no KAGGLE_API_TOKEN secret ({{e}}) — add it via the 🔑 icon, notebook access ON')
+# Secrets → env (🔑 icon, notebook access ON). bootstrap.py inherits these.
+#   KAGGLE_API_TOKEN — required (kaggle 2.x bearer token, no username needed)
+#   GH_TOKEN         — optional (fine-grained PAT, Contents:RW on this repo) to persist the diary to git
+from google.colab import userdata
+for name in ('KAGGLE_API_TOKEN', 'GH_TOKEN'):
+    try:
+        v = userdata.get(name)
+        if v:
+            os.environ[name] = v
+            print(f'✓ {{name}} set')
+        else:
+            print(f'⚠ {{name}} secret is empty')
+    except Exception:
+        opt = ' (optional — diary won\\'t persist to git)' if name == 'GH_TOKEN' else ''
+        print(f'⚠ no {{name}} secret{{opt}} — add via 🔑, notebook access ON')
 """),
     md("## 2. Run — fresh clone + bootstrap (all logic lives in the repo)"),
     code(f"""%cd /content
