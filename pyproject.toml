@@ -24,6 +24,7 @@ dependencies = [
     "synth-decoder",
     # Sequence / curve-alignment
     "dtaidistance>=2.3",      # DTW for typewell <-> horizontal curve alignment
+    "numba>=0.59",            # JIT for the ported 9.251 feature engine (PF/DTW/beam)
 ]
 
 [project.optional-dependencies]

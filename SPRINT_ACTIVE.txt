@@ -1,4 +1,4 @@
-notebooks/05_selfcorr_gate.py
+notebooks/06_kernel_baseline.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
