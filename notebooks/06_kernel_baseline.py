@@ -11,6 +11,8 @@ cached to data/cache. Set ROGII_ALGO to override the model.
 """
 from __future__ import annotations
 
+import gc
+import os
 import time
 from pathlib import Path
 
@@ -23,9 +25,9 @@ from src.config import TRAIN_DIR
 from src.evaluate import rmse
 from src.observer import Experiment
 
-CACHE = Path("data/cache")
-LGB_PARAMS = dict(num_leaves=255, min_child_samples=15, subsample=0.8, subsample_freq=1,
-                  colsample_bytree=0.8, reg_lambda=3.0, reg_alpha=0.05, learning_rate=0.025)
+# Cache the expensive FE in DRIVE (survives the bootstrap's repo re-clone); local fallback.
+CACHE = Path(os.environ.get("DRIVE_ROOT") or "data") / "cache"
+ALGO = train.default_algo()   # xgb on GPU (T4) — avoids the lgb-CPU OOM + actually uses the GPU
 
 
 def _build(label, wells, is_train):
@@ -46,26 +48,35 @@ def _build(label, wells, is_train):
 def main() -> None:
     t0 = time.time()
     dev, sacred = cv.sacred_split(data.list_well_ids("train"))
+    maxw = int(os.environ.get("ROGII_MAX_WELLS") or 0)   # quick pipeline validation on a subset
+    sfx = ""
+    if maxw:
+        dev, sacred = dev[:maxw], sacred[:max(20, maxw // 4)]
+        sfx = f"_{maxw}"
+        print(f"SUBSET mode: dev {len(dev)} | sacred {len(sacred)} (ROGII_MAX_WELLS={maxw})")
     print(f"dev {len(dev)} | sacred {len(sacred)} | fitting imputers on DEV (clean gate)")
     k9.fit_imputers(dev, TRAIN_DIR)
 
-    dev_df = _build("dev_k9", dev, True)
-    sac_df = _build("sacred_k9", sacred, True)
+    dev_df = _build("dev_k9" + sfx, dev, True)
+    sac_df = _build("sacred_k9" + sfx, sacred, True)
     feats = [c for c in dev_df.columns if c not in {"well", "id", "target"}]
-    X, y, g = dev_df[feats], dev_df["target"].to_numpy(float), dev_df["well"].to_numpy()
-    Xs, ys = sac_df[feats], sac_df["target"].to_numpy(float)
+    # float32 to halve RAM (3M x 222 float64 ~5GB x fold-copies OOM'd Colab's 13GB)
+    X = dev_df[feats].astype("float32")
+    y, g = dev_df["target"].to_numpy(np.float32), dev_df["well"].to_numpy()
+    Xs, ys = sac_df[feats].astype("float32"), sac_df["target"].to_numpy(np.float32)
+    del dev_df, sac_df; gc.collect()
     dev_floor, sac_floor = rmse(np.zeros_like(y), y), rmse(np.zeros_like(ys), ys)
-    print(f"X {X.shape} | {len(feats)} features | dev_floor {dev_floor:.3f} sac_floor {sac_floor:.3f}")
+    print(f"X {X.shape} ({ALGO}) | {len(feats)} features | dev_floor {dev_floor:.3f} sac_floor {sac_floor:.3f}")
 
     exp = Experiment.start(
         version="v4_kernel9251", parent="v0_floor",
         hypothesis=("Ported 9.251 feature engine (PF/DTW/beam/NCC/affine/spatial-imputers) + single LGB. "
                     "Expect to clear the floor decisively and approach ~10-11 (ensemble+blend reach 9.25)."),
         predicted_delta=3.0, confidence="medium",
-        feature_changes=["+ full 9.251 build_well features"], pipeline_changes=["port baseline"],
+        feature_changes=["+ full 9.251 build_well features"], pipeline_changes=[f"port baseline ({ALGO})"],
         cloud_or_local="cloud")
 
-    res = train.train_variant("v4_kernel9251", "lgb", X, y, g, params=LGB_PARAMS,
+    res = train.train_variant("v4_kernel9251", ALGO, X, y, g,
                               save=True, fit_full=True, use_gpu="auto")
     full = joblib.load(train.PROBS / "v4_kernel9251" / "model_full.pkl")
     sac_pred = full.predict(Xs)
@@ -86,7 +97,7 @@ def main() -> None:
     # test submission (de-residualize: predicted drift + last_known_tvt). Uses the same
     # DEV imputers as training (consistent features). id = "{well}_{iloc}" matches the sample.
     test_df = _build("test_k9", data.list_well_ids("test"), False)
-    tvt = full.predict(test_df[feats]) + test_df["last_known_tvt"].to_numpy(float)
+    tvt = full.predict(test_df[feats].astype("float32")) + test_df["last_known_tvt"].to_numpy(float)
     ss = submission.build_submission(dict(zip(test_df["id"], tvt)))
     out = submission.save_submission(ss, "v4_kernel9251")
     print(f"wrote {out}")
