@@ -35,6 +35,11 @@ Expected deltas are HYPOTHESES (the kernels give no ablation) — the point is t
 |---|---|---|---|---|
 | now | geometry + naive-align + self-corr (xgb) | — | 15.2 (lgb 14.45) | ✔ 15.18 / 14.45 |
 | **M1 (A)** | **ported 9.251 engine (222 feats), single LGB, stride-8 (380K rows)** | PF-momentum + spatial imputers + DTW/beam + slope, stacked under a GBDT | ≤13.5 | **✅ 9.490 (Δfloor −4.59) — broke floor, at target, near public-best 9.251** |
+| **M3** | **LGB×3 + CatBoost×3(GPU) + supervised OOF blend (stride 8)** | model diversity + variance reduction; cat is the strongest family here | ≤9.25 | **✅ 9.155 — beat target AND public-best-9.251 (on our 150-well holdout). cat-GPU solo 9.14–9.26 (best); blend≈simple-avg; lgb1/lgb2 zeroed.** |
+
+**M3 DONE (2026-05-26).** Sacred 9.155 on stride-8 (1/8 data), no tuning. Headroom remains: lower stride
+(more data) + target transform. Caveat: 9.155 is our *sacred* (150 train wells); the 3-well LB is a
+separate noisy check — submit once to confirm scale, trust sacred for decisions.
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
