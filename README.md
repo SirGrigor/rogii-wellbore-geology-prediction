@@ -44,4 +44,13 @@ python -m src.diary timeline         # experiment diary
 ```
 
 Every experiment goes through the diary discipline (hypothesis + predicted_delta BEFORE
-training). Cloud-first: NN/heavy training → Colab (see `notebooks/colab_runner.ipynb`).
+training). **Cloud-first: all model fits run on Colab** — never locally.
+
+### Colab (idempotent)
+`notebooks/colab_runner.ipynb` is a thin, stable launcher: it mounts Drive, sets Kaggle
+auth, fresh-clones the repo, and runs **`colab/bootstrap.py`** — which holds ALL run logic
+(install · data · run the `SPRINT_ACTIVE.txt` script with `PYTHONPATH=repo root` · sync
+artifacts to Drive). Because every run re-clones and bootstrap is versioned, **re-running
+always executes the latest flow and the notebook never needs editing**. Switch experiments
+by editing `SPRINT_ACTIVE.txt` (or `colab/bootstrap.py`) + push, then re-run the Run cell.
+Sanity-check the flow locally with `python colab/bootstrap.py --dry-run`.
