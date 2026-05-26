@@ -45,6 +45,13 @@ Expected deltas are HYPOTHESES (the kernels give no ablation) — the point is t
 > multi-scale/stochastic DTW, beam, typewell-aware spatial, formations) → reproduce ~9.25 on sacred
 > (a measurable target), then innovate on top; vs (B) keep reinventing each component (slower, repeatedly
 > missing kernel details). Recommend **(A)** — it's the more measurable + adequate path to 9.5.
+>
+> **CHOSE (A) — done (2026-05-26):** ported the 9.251 `build_well` → `src/kernel9251.py` (PF-momentum,
+> multi-scale/stochastic DTW, beam, NCC, affine cal, formation/ANCC spatial imputers; credit
+> nihilisticneuralnet). 222 features, target=drift, validated locally on 1 well (1.5s/well).
+> `notebooks/06_kernel_baseline.py` (v4_kernel9251): DEV-fit imputers → build_dataset (cached) → single
+> LGB → sacred. **Queued for Colab.** Single-LGB target ≈ 10-11 (clear floor); the LGB×3+Cat×3 ensemble +
+> hill-climb blend (M3) → ~9.25. Then innovate on top.
 | **M1** | **PF-with-momentum backbone** (anchored GR tracker, tracks TVT velocity) | smooth anchored path; the GR lever done right | with spatial: **~12.5** | — |
 | **M2** | multi-scale DTW (radii 20/50/100/200) + stochastic-DTW **uncertainties** (std/cv) | diverse alignment estimates + confidence the GBDT can weight | **~11.5** | — |
 | **M2** | beam search (multi-config) + multi-scale NCC + GR affine calibration | more decorrelated estimates; fixes GR scale mismatch | **~11.0** | — |
