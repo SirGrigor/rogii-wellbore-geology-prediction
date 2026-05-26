@@ -12,6 +12,7 @@ see TOOLKIT_PORT.md. Heavy/full-data runs go to Colab (cloud-first).
 """
 from __future__ import annotations
 
+import subprocess
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -36,22 +37,49 @@ class TrainResult:
     params: dict[str, Any] = field(default_factory=dict)
 
 
-def _lgb_defaults() -> dict:
-    return dict(objective="regression", metric="rmse", n_estimators=2000,
+N_EST_CAP = 4000            # high cap; early stopping decides the real count
+EARLY_STOPPING_ROUNDS = 100
+
+
+def _gpu_available() -> bool:
+    """True if a CUDA GPU is present (nvidia-smi runs)."""
+    import shutil
+    if not shutil.which("nvidia-smi"):
+        return False
+    try:
+        subprocess.run(["nvidia-smi"], capture_output=True, check=True, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+# GPU note: xgb (device="cuda") + cat (task_type="GPU") are reliable on Colab T4.
+# LightGBM GPU on Colab needs a special build and is unreliable, so lgb stays CPU —
+# early stopping keeps it fast. For a GPU run prefer algo="xgb".
+def _lgb_defaults(use_gpu: bool) -> dict:
+    return dict(objective="regression", metric="rmse", n_estimators=N_EST_CAP,
                 learning_rate=0.03, num_leaves=63, subsample=0.8, subsample_freq=1,
                 colsample_bytree=0.8, min_child_samples=50, random_state=MODEL_SEED,
                 n_jobs=-1, verbosity=-1)
 
 
-def _xgb_defaults() -> dict:
-    return dict(objective="reg:squarederror", n_estimators=2000, learning_rate=0.03,
+def _xgb_defaults(use_gpu: bool) -> dict:
+    return dict(objective="reg:squarederror", n_estimators=N_EST_CAP, learning_rate=0.03,
                 max_depth=7, subsample=0.8, colsample_bytree=0.8, min_child_weight=5,
-                random_state=MODEL_SEED, n_jobs=-1, tree_method="hist")
+                random_state=MODEL_SEED, n_jobs=-1, tree_method="hist",
+                device="cuda" if use_gpu else "cpu")
 
 
-def _cat_defaults() -> dict:
-    return dict(loss_function="RMSE", iterations=2000, learning_rate=0.03, depth=8,
-                random_seed=MODEL_SEED, verbose=False)
+def _cat_defaults(use_gpu: bool) -> dict:
+    p = dict(loss_function="RMSE", iterations=N_EST_CAP, learning_rate=0.03, depth=8,
+             random_seed=MODEL_SEED, verbose=False)
+    if use_gpu:
+        p["task_type"] = "GPU"
+    return p
+
+
+def _n_est_key(algo: str) -> str:
+    return "iterations" if algo == "cat" else "n_estimators"
 
 
 def _make_model(algo: str, params: dict):
@@ -67,13 +95,27 @@ def _make_model(algo: str, params: dict):
     raise ValueError(f"unknown algo {algo!r} (lgb|xgb|cat)")
 
 
-def _fit_predict(algo: str, params: dict, Xtr, ytr, Xva, Xte):
-    """Train one fold; return (val_pred, test_pred_or_None)."""
-    m = _make_model(algo, params)
-    m.fit(Xtr, ytr) if algo != "xgb" else m.fit(Xtr, ytr, verbose=False)
+def _fit_predict(algo: str, params: dict, Xtr, ytr, Xva, yva, Xte):
+    """Train one fold WITH early stopping. Returns (val_pred, test_pred_or_None, best_iter)."""
+    if algo == "lgb":
+        import lightgbm as lgb
+        m = lgb.LGBMRegressor(**params)
+        m.fit(Xtr, ytr, eval_set=[(Xva, yva)], eval_metric="rmse",
+              callbacks=[lgb.early_stopping(EARLY_STOPPING_ROUNDS, verbose=False),
+                         lgb.log_evaluation(0)])
+        best = m.best_iteration_ or params[_n_est_key(algo)]
+    elif algo == "xgb":
+        import xgboost as xgb
+        m = xgb.XGBRegressor(**params, early_stopping_rounds=EARLY_STOPPING_ROUNDS)
+        m.fit(Xtr, ytr, eval_set=[(Xva, yva)], verbose=False)
+        best = (m.best_iteration or params[_n_est_key(algo)]) + 1
+    else:  # cat
+        m = _make_model(algo, params)
+        m.fit(Xtr, ytr, eval_set=(Xva, yva), early_stopping_rounds=EARLY_STOPPING_ROUNDS, verbose=False)
+        best = m.get_best_iteration() or params[_n_est_key(algo)]
     val = m.predict(Xva)
     test = m.predict(Xte) if Xte is not None else None
-    return val, test
+    return val, test, int(best)
 
 
 def train_variant(
@@ -88,30 +130,40 @@ def train_variant(
     n_folds: int = N_FOLDS,
     save: bool = True,
     fit_full: bool = False,
+    use_gpu: bool | str = "auto",
 ) -> TrainResult:
-    """Train `algo` (lgb|xgb|cat) with GroupKFold-by-well. Returns OOF + test + per-fold RMSE.
+    """Train `algo` (lgb|xgb|cat) with GroupKFold-by-well + early stopping.
 
-    fit_full: after CV, refit one model on ALL rows and save it (joblib) to
-    probs/<version>/model_full.pkl — the deployable model the Kaggle inference
-    notebook loads (kernels-only submission). CV still gives the honest OOF RMSE.
+    use_gpu: "auto" (use a CUDA GPU if present), True, or False. Affects xgb (device=cuda)
+        and cat (task_type=GPU); lgb stays CPU on Colab (unreliable GPU build) — early
+        stopping keeps it fast. For a GPU run prefer algo="xgb".
+    fit_full: after CV, refit ONE model on ALL rows (no eval set → uses the folds' mean
+        best-iteration as n_estimators) and save it to probs/<version>/model_full.pkl —
+        the deployable model the Kaggle inference notebook loads. CV gives the honest OOF.
     """
     t0 = time.time()
-    defaults = {"lgb": _lgb_defaults, "xgb": _xgb_defaults, "cat": _cat_defaults}[algo]()
+    gpu = _gpu_available() if use_gpu == "auto" else bool(use_gpu)
+    defaults = {"lgb": _lgb_defaults, "xgb": _xgb_defaults, "cat": _cat_defaults}[algo](gpu)
     defaults.update(params or {})
+    dev = "GPU" if (gpu and algo in ("xgb", "cat")) else "CPU"
+    print(f"[train] {algo} on {dev} (gpu_available={gpu}); early stopping rounds={EARLY_STOPPING_ROUNDS}")
 
     X = X.reset_index(drop=True)
     y = np.asarray(y, dtype=float)
     oof = np.full(len(y), np.nan)
     test_acc = np.zeros(len(X_test)) if X_test is not None else None
     fold_rmses: list[float] = []
+    best_iters: list[int] = []
 
     cv = GroupKFold(n_splits=n_folds)
     for tr, va in cv.split(X, y, groups=groups):
-        val, test = _fit_predict(algo, defaults, X.iloc[tr], y[tr], X.iloc[va], X_test)
+        val, test, best = _fit_predict(algo, defaults, X.iloc[tr], y[tr], X.iloc[va], y[va], X_test)
         oof[va] = val
         fold_rmses.append(rmse(y[va], val))
+        best_iters.append(best)
         if test_acc is not None:
             test_acc += test / n_folds
+    print(f"[train] fold best-iters {best_iters} (cap {N_EST_CAP})")
 
     res = TrainResult(version=version, algo=algo, oof=oof, test_pred=test_acc,
                       fold_rmses=fold_rmses, oof_rmse=rmse(y, oof),
@@ -124,7 +176,10 @@ def train_variant(
             np.save(d / "test.npy", test_acc)
     if fit_full:
         import joblib
-        full = _make_model(algo, defaults)
+        # no eval set on the full fit → fix n_estimators at the folds' mean best-iter (+10%)
+        full_params = dict(defaults)
+        full_params[_n_est_key(algo)] = max(50, int(np.mean(best_iters) * 1.1))
+        full = _make_model(algo, full_params)
         full.fit(X, y) if algo != "xgb" else full.fit(X, y, verbose=False)
         d = PROBS / version
         d.mkdir(parents=True, exist_ok=True)

@@ -13,6 +13,7 @@ tells Tier 1 where the signal is (and whether the alignment recipe is the bottle
 """
 from __future__ import annotations
 
+import os
 import time
 
 import numpy as np
@@ -22,8 +23,12 @@ from src.evaluate import rmse
 from src.observer import Experiment
 
 
+ALGO = os.environ.get("ROGII_ALGO", "lgb")   # "xgb" for the reliable Colab-GPU path
+
+
 def main() -> None:
     t0 = time.time()
+    print(f"algo={ALGO} (set ROGII_ALGO=xgb for GPU). early stopping on; GPU auto-detected.")
     exp = Experiment.start(
         version="v1_lgb_resid",
         parent="v0_floor",
@@ -55,8 +60,8 @@ def main() -> None:
     te = features.build_dataset("test", with_alignment=True, target="residual")
     X_test, test_anchor, test_groups = te["X"], te["anchor"], te["groups"]
 
-    res = train.train_variant("v1_lgb_resid", "lgb", X, y_drift, groups,
-                              X_test=X_test, save=True, fit_full=True)
+    res = train.train_variant("v1_lgb_resid", ALGO, X, y_drift, groups,
+                              X_test=X_test, save=True, fit_full=True, use_gpu="auto")
 
     # de-residualize: TVT = drift + anchor; metric RMSE on absolute TVT
     tvt_oof = res.oof + anchor
