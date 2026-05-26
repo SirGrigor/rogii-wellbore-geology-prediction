@@ -18,7 +18,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from . import align, data, features_sequence as fs
+from . import align, data, features_sequence as fs, selfcorr
 from .config import DEPTH_COL, TARGET, TVT_INPUT_COL, WELL_ID
 
 GR = "GR"
@@ -112,6 +112,10 @@ def build_well_features(horiz_df: pd.DataFrame, typewell_df: pd.DataFrame,
     if with_alignment:
         win = max(50, len(horiz_df) // 5)
         parts.append(align.alignment_features(horiz_df, typewell_df, window=win))
+        # known-prefix self-correlation (P1): smoothed TVT estimate + confidences + trust
+        sc = selfcorr.selfcorr_features(horiz_df)
+        parts.append(sc[["selfcorr_tvt_smooth", "selfcorr_conf_w8", "selfcorr_conf_w15",
+                         "selfcorr_conf_w25", "selfcorr_trust"]])
 
     return pd.concat(parts, axis=1)
 
