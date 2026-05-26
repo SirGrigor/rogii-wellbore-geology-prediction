@@ -1,4 +1,4 @@
-notebooks/06_kernel_baseline.py
+notebooks/07_ensemble.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
