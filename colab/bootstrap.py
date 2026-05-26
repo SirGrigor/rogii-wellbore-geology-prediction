@@ -130,8 +130,22 @@ def push_diary_to_git() -> None:
           else f"  ⚠ diary push failed (rc={r.returncode}): {r.stderr.strip()[:200]}")
 
 
+def gpu_banner() -> None:
+    """Print whether a GPU is detected (and which) so it's visible in the log."""
+    import shutil
+    has_proc = os.path.exists("/proc/driver/nvidia/version")
+    smi = shutil.which("nvidia-smi") or next(
+        (p for p in ("/usr/bin/nvidia-smi", "/opt/bin/nvidia-smi") if os.path.exists(p)), None)
+    print(f"[0] GPU: /proc/driver/nvidia={has_proc}, nvidia-smi={smi}")
+    if smi and not DRY:
+        subprocess.run([smi, "-L"], check=False)
+    print("    → algo will be xgb (device=cuda) if a GPU is detected, else lgb (CPU). "
+          "Set ROGII_ALGO to override.")
+
+
 def main() -> None:
     print(f"=== rogii Colab bootstrap (root={ROOT}{' DRY-RUN' if DRY else ''}) ===")
+    gpu_banner()
     install()
     get_data()
     pull_artifacts()

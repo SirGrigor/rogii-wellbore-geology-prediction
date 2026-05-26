@@ -42,12 +42,28 @@ EARLY_STOPPING_ROUNDS = 100
 
 
 def _gpu_available() -> bool:
-    """True if a CUDA GPU is present (nvidia-smi runs)."""
+    """True if a CUDA GPU is present.
+
+    Checks the NVIDIA driver node first (/proc/driver/nvidia/version) — reliable on
+    Colab regardless of PATH — then torch.cuda, then nvidia-smi at PATH/known locations.
+    (The old shutil.which('nvidia-smi') alone returned False on Colab → silent CPU.)
+    """
+    import os
     import shutil
-    if not shutil.which("nvidia-smi"):
+    if os.path.exists("/proc/driver/nvidia/version"):
+        return True
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return True
+    except Exception:
+        pass
+    smi = shutil.which("nvidia-smi") or next(
+        (p for p in ("/usr/bin/nvidia-smi", "/opt/bin/nvidia-smi") if os.path.exists(p)), None)
+    if not smi:
         return False
     try:
-        subprocess.run(["nvidia-smi"], capture_output=True, check=True, timeout=10)
+        subprocess.run([smi], capture_output=True, check=True, timeout=10)
         return True
     except Exception:
         return False
