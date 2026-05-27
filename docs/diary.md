@@ -18,6 +18,7 @@ Metric: **RMSE** (↓ better). Source of truth: `experiments.jsonl` (git-tracked
 | [v8_feats](versions/v8_feats.md) | `v6s8_fast` | +0.10000 | +0.00686 | 9.15956 | 9.15956 | +0.00000 | Horizon+geometry (▲Z since PS, md-since-PS, inclination) and GR-tex... | ⚠ prediction_undershot, multiple_changes |
 | [v9_postproc](versions/v9_postproc.md) | `v6s8_fast` | +0.15000 | +0.00054 | 9.16587 | 9.16587 | +0.00000 | border_count=254 (finer splits) + per-well savgol smoothing of the ... | ⚠ prediction_undershot, multiple_changes |
 | [v10_tabpfn](versions/v10_tabpfn.md) | `v6s8_fast` | +0.10000 | +0.08579 | 9.08063 | 9.08063 | +0.00000 | TabPFN (in-context tabular foundation model) is a different functio... | ⚠ fold_collapse, fold_instability |
+| [v12_spatialdip](versions/v12_spatialdip.md) | `v6s8_fast` | +0.10000 | -0.00425 | 9.17067 | 9.17067 | +0.00000 | Frame-independent cross-well dip (neighbours' TVT-plane gradient → ... | ⚠ prediction_sign_mismatch |
 
 ## Commands
 ```
