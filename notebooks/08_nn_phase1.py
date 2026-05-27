@@ -106,7 +106,8 @@ def main() -> None:
           f"NN⊕GBDT sacred {sac_w:.3f} | NN weight {w_w.get('nn', 0):.3f} | resid corr {corr:.3f}")
     print(f"blend WITH nn: {dict((k, round(v,3)) for k,v in w_w.items())}")
 
-    exp.record(oof_score_mean=sac_w, holdout_score=sac_w, runtime_sec=time.time() - t0,
+    exp.record(oof_score_mean=sac_w, oof_score_per_fold=[float(x) for x in nn_fr],
+               holdout_score=sac_w, runtime_sec=time.time() - t0,
                extra={"nn_alone_sacred": nn_sac_rmse, "gbdt_only_sacred": sac_wo,
                       "ens_sacred": sac_w, "nn_weight": w_w.get("nn", 0.0),
                       "resid_corr": corr, "nn_fold_rmse": nn_fr, "window": WINDOW})
