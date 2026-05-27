@@ -41,13 +41,14 @@ PRED_DELTA = 0.0 if FAST else {4: 0.20, 2: 0.35, 1: 0.45}.get(STRIDE, 0.10)
 LGB_BASE = dict(num_leaves=_LEAVES, min_child_samples=15, subsample=0.8, subsample_freq=1,
                 colsample_bytree=0.8, reg_lambda=3.0, reg_alpha=0.05)
 CAT_BASE = dict(depth=_DEPTH, l2_leaf_reg=2.0, min_data_in_leaf=15)
+# Lean recipe: the blend zeroed lgb1/lgb2 (seeds 7/123) in BOTH v5 and v6s8_fast — they're
+# redundant, so drop them (free: zero weight ⇒ identical blend, 2 fewer CPU fits). Explicit
+# suffixes keep model names stable (lgb0, cat3/4/5) across the change → diary + submission don't break.
 MODELS = [
-    ("lgb", dict(learning_rate=0.025, random_state=42, **LGB_BASE)),
-    ("lgb", dict(learning_rate=0.020, random_state=7, **LGB_BASE)),
-    ("lgb", dict(learning_rate=0.030, random_state=123, **LGB_BASE)),
-    ("cat", dict(learning_rate=0.025, random_seed=42, **CAT_BASE)),
-    ("cat", dict(learning_rate=0.020, random_seed=7, **CAT_BASE)),
-    ("cat", dict(learning_rate=0.030, random_seed=123, **CAT_BASE)),
+    ("lgb0", "lgb", dict(learning_rate=0.025, random_state=42, **LGB_BASE)),
+    ("cat3", "cat", dict(learning_rate=0.025, random_seed=42, **CAT_BASE)),
+    ("cat4", "cat", dict(learning_rate=0.020, random_seed=7, **CAT_BASE)),
+    ("cat5", "cat", dict(learning_rate=0.030, random_seed=123, **CAT_BASE)),
 ]
 
 
@@ -90,8 +91,8 @@ def main() -> None:
 
     oof_d, sac_d, test_d = {}, {}, {}
     board = []
-    for i, (algo, params) in enumerate(MODELS):
-        name = f"{VER}_{algo}{i}"
+    for i, (suffix, algo, params) in enumerate(MODELS):
+        name = f"{VER}_{suffix}"
         dash.training(name, i + 1, len(MODELS))
         res = train.train_variant(name, algo, X, y, g, params=params, save=True, fit_full=True, use_gpu="auto")
         full = joblib.load(train.PROBS / name / "model_full.pkl")

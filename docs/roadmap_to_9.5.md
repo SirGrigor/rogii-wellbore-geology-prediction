@@ -62,6 +62,13 @@ confirm on LB but **decide on sacred**.
 | **S2** | **decorrelated NN: 1D-CNN/GRU on (GR seq + trajectory) → drift**, blended/stacked with the GBDT | the port is target-FREE DTW; a *supervised* sequence model learns GR→TVT directly → orthogonal signal. This is the lever that beats the moved pool (8.2 < old public 9.25). Compute-parity: Deotte ⇒ out-GBDT-ing him is hard; our edge is the NN | **~8.4** | — |
 | **S3** | refine: target transform (Huber/per-step Δ), feature selection, stacking>blend | squeeze variance once new signal is in | **~8.2** | — |
 
+**FAST proxy validated (2026-05-27, v6s8_fast):** 63-leaf/depth-6 at stride-8 → sacred **9.166** vs v5's
+255/depth-7 **9.155** (Δ+0.011 = noise) in **53 min** (~1.7× faster; ceiling is cat-GPU rounds, not LGB
+leaves). ⇒ **iterate the ladder in `ROGII_FAST=1`**; 255 adds no measured quality, kept only for a final
+re-check at the winning stride (more data *might* let its capacity pay off — faithfulness was at 1/8 data).
+Also: the blend zeroed **lgb1/lgb2** in both v5 and v6s8_fast → drop them (free, zero-weight) → lean
+4-model recipe (lgb0 + cat3/4/5).
+
 **Decision gate G4 (after S1):** if full-data + smoothing + fidelity-fix doesn't get sacred ≲ 8.6 / LB
 ≲ 9.25, the gap is structural → go to S2 (new model family), don't keep tuning GBDT. **Lead with new
 signal (data, NN, features), not HPO** (HPO refines existing signal; it won't move a 1-ft wall).
