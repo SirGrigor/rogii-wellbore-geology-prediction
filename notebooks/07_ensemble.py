@@ -19,7 +19,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from src import blend, cv, data, kernel9251 as k9, submission, train
+from src import blend, cv, dashboard as dash, data, kernel9251 as k9, submission, train
 from src.config import TRAIN_DIR
 from src.evaluate import rmse
 from src.observer import Experiment
@@ -84,13 +84,20 @@ def main() -> None:
         predicted_delta=PRED_DELTA, confidence="low" if FAST else "medium",
         pipeline_changes=[f"LGB leaves={_LEAVES}, cat depth={_DEPTH}, stride {STRIDE}"], cloud_or_local="cloud")
 
+    dash.goal_banner(VER, f"{_LEAVES} leaves / depth {_DEPTH} @ stride {STRIDE}",
+                     "is the fast 63-leaf config faithful to 255 (9.155)?" if FAST
+                     else f"data lever: stride {STRIDE} → expect sacred toward ~8.7")
+
     oof_d, sac_d, test_d = {}, {}, {}
+    board = []
     for i, (algo, params) in enumerate(MODELS):
         name = f"{VER}_{algo}{i}"
+        dash.training(name, i + 1, len(MODELS))
         res = train.train_variant(name, algo, X, y, g, params=params, save=True, fit_full=True, use_gpu="auto")
         full = joblib.load(train.PROBS / name / "model_full.pkl")
         oof_d[name], sac_d[name], test_d[name] = res.oof, full.predict(Xs), full.predict(Xt)
-        print(f"  {name}: dev_oof {res.oof_rmse:.3f} | sacred {rmse(ys, sac_d[name]):.3f}")
+        board.append({"name": name.replace(f"{VER}_", ""), "oof": res.oof_rmse, "sacred": rmse(ys, sac_d[name])})
+        dash.scoreboard(board)
         del full, res; gc.collect()
 
     # supervised blend: weights on dev OOF (leak-free), evaluated on sacred
@@ -100,7 +107,8 @@ def main() -> None:
     simple = rmse(ys, np.mean(list(sac_d.values()), axis=0))
     print(f"\nblend weights: {dict((k, round(v, 3)) for k, v in w.items())}")
     print(f"blend dev-OOF {oof_blend:.3f} | SACRED blend {sac_rmse:.3f} | simple-avg {simple:.3f} "
-          f"| floor {sac_floor:.3f} | v4 9.490")
+          f"| floor {sac_floor:.3f} | v5 9.155")
+    dash.verdict(VER, sac_rmse, time.time() - t0, simple_avg=simple)
 
     exp.record(oof_score_mean=sac_rmse, oof_score_per_fold=[rmse(ys, v) for v in sac_d.values()],
                holdout_score=sac_rmse, runtime_sec=time.time() - t0,
