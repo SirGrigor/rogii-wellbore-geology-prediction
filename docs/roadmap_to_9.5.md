@@ -155,6 +155,16 @@ Stepped out of the kernel's GR-alignment worldview; read the .pptx brief + raw E
   neighbours (validate vs known, ft-level) → reconstruct drift = −dz + Δg → sacred RMSE. Blend with the GBDT
   (decorrelated path). If imputation beats the kernel's incidental one → breaks the wall. Caveat: isolated
   wells (sparse neighbours) impute worst — and the 3 test wells may be isolated (limits LB, not sacred).
+
+**S-formation — DEAD END, but it EXPLAINS the ceiling (2026-05-27, local test).** Identity confirmed (g-fit
+RMSE 0.007 with TRUE formations). But IDW spatial imputation gives formation MAE ~28 ft, and reconstruction
+`drift = −dz + g·Δ(imputed formations)` → **RMSE 55** (≫ 9.16). Reason: TVT/drift (±35 ft) is a *small
+difference of large* formation depths (~−9400); differencing two ~28-ft-MAE imputations amplifies noise
+beyond the signal. **This is WHY GR-alignment is necessary** — it resolves TVT *directly* to ~9 ft without
+needing precise absolute formations; precise formations would themselves require GR-alignment (circular).
+⇒ **~9.16 is near the GR-alignment ceiling, and GR-alignment is provably the right tool** (geometric
+reconstruction is 6× worse). The structure is real but not an independent lever. Remaining: a booster
+overview (within-paradigm, marginal-blend odds) per user ask; else the understood-ceiling harvest.
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well

@@ -1,4 +1,4 @@
-notebooks/13_spatial_dip.py
+notebooks/14_boosters.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
