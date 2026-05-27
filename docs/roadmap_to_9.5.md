@@ -77,6 +77,19 @@ Also: the blend zeroed **lgb1/lgb2** in both v5 and v6s8_fast → drop them (fre
 **Decision gate G4 (after S1):** if full-data + smoothing + fidelity-fix doesn't get sacred ≲ 8.6 / LB
 ≲ 9.25, the gap is structural → go to S2 (new model family), don't keep tuning GBDT. **Lead with new
 signal (data, NN, features), not HPO** (HPO refines existing signal; it won't move a 1-ft wall).
+
+## ⛔ WALL at sacred ~9.16 (2026-05-27)
+Four independent attempts to break below 9.16 all flat — this is a SIGNAL ceiling, not a tuning gap:
+1. **data** (stride 8→4, 2× rows): 9.166 → 9.192 (flat/worse).
+2. **capacity** (63→255 leaves): 9.166 ≈ 9.155 (flat).
+3. **orthogonal NN** (v7, 1D-CNN raw GR): NN-alone 13.87, blend weight 0.000, resid corr 0.62 (not decorrelated).
+4. **new features** (v8, W1 horizon/geom + W2 GR-texture): ΔW1 −0.011 (noise), ΔW2 0.000 (CatBoost didn't split on them — identical best-iters). **Keep W1, drop W2.**
+
+Target 8.2 is ~1 ft below the ceiling. Remaining genuinely-orthogonal bets (untried): **cross-well
+spatial drift-rate** (Wave-3, neighbours' frame-independent dip — leakage-careful, OOF-fold-only
+neighbour stats), and a **reconnaissance revisit** (what do the 8.2 leaders do that the public 9.25
+kernel doesn't?). If those miss too, ~9.16 is our honest result (broke floor 14.08, matched public-best
+on sacred) and the medal likely isn't reachable this round — harvest the lessons + reusable toolkit.
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
