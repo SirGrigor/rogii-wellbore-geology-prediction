@@ -26,13 +26,21 @@ from src.observer import Experiment
 
 CACHE = Path(os.environ.get("DRIVE_ROOT") or "data") / "cache"
 STRIDE = int(os.environ.get("ROGII_ROW_STRIDE") or 8)
-VER = f"v6s{STRIDE}"  # stride-aware version (S1a data ladder); v5_ensemble was stride-8 → sacred 9.155
-# predicted improvement over v5's 9.155 as we add data (8→4→2→1) — hypothesis-first (diary rule)
-PRED_DELTA = {4: 0.20, 2: 0.35, 1: 0.45}.get(STRIDE, 0.10)
+# ROGII_FAST=1 → low-capacity EXPLORATION proxy (LGB num_leaves 63 / cat depth 6): ~2-3x faster on the
+# CPU-bound LGBs. The QUALITY config (255 / depth 7) is the DEFAULT and the finalize-on-submission config.
+# First use = a FAITHFULNESS check: run FAST at stride-8 and compare sacred to v5_ensemble's 9.155 (same
+# recipe at 255). If they track → iterate in FAST mode, finalize on the full config. If 63 ≥ 255 → 255 was
+# overfitting, retire it. (num_leaves is HPO — it won't break the wall to 8.2; the point is cheap iteration.)
+FAST = os.environ.get("ROGII_FAST") == "1"
+_LEAVES, _DEPTH = (63, 6) if FAST else (255, 7)
+VER = f"v6s{STRIDE}" + ("_fast" if FAST else "")  # stride/capacity-aware version; v5_ensemble was 255/stride-8
+# hypothesis-first predicted improvement over v5's 9.155 (diary rule). FAST: expect ~comparable (capacity
+# probe — 63 may even generalize better). Full ladder (8→4→2→1): more data → lower sacred.
+PRED_DELTA = 0.0 if FAST else {4: 0.20, 2: 0.35, 1: 0.45}.get(STRIDE, 0.10)
 
-LGB_BASE = dict(num_leaves=255, min_child_samples=15, subsample=0.8, subsample_freq=1,
+LGB_BASE = dict(num_leaves=_LEAVES, min_child_samples=15, subsample=0.8, subsample_freq=1,
                 colsample_bytree=0.8, reg_lambda=3.0, reg_alpha=0.05)
-CAT_BASE = dict(depth=7, l2_leaf_reg=2.0, min_data_in_leaf=15)
+CAT_BASE = dict(depth=_DEPTH, l2_leaf_reg=2.0, min_data_in_leaf=15)
 MODELS = [
     ("lgb", dict(learning_rate=0.025, random_state=42, **LGB_BASE)),
     ("lgb", dict(learning_rate=0.020, random_state=7, **LGB_BASE)),
@@ -62,15 +70,19 @@ def main() -> None:
                                is_train=False, label="test_v5")
     Xt = test_df[feats].astype("float32")
     anchor_t = test_df["last_known_tvt"].to_numpy(float)
-    print(f"[{VER}] X {X.shape} (stride {STRIDE}) | {len(feats)} feats | sac_floor {sac_floor:.3f} | v5 stride8 was 9.155")
+    print(f"[{VER}] X {X.shape} (stride {STRIDE}) | leaves {_LEAVES}/depth {_DEPTH} | {len(feats)} feats | "
+          f"sac_floor {sac_floor:.3f} | v5 (255/stride8) was 9.155")
 
+    hyp = (f"FAST faithfulness probe: low-capacity profile (LGB leaves {_LEAVES} / cat depth {_DEPTH}) at "
+           f"stride {STRIDE} vs v5_ensemble (255/depth7, stride-8 → sacred 9.155). Does the fast proxy track "
+           "the quality config (rank-order/gap), and does 255 earn its cost or just overfit?") if FAST else \
+          (f"S1a data lever: same 6-model recipe at stride {STRIDE} (v5 was stride-8 → sacred 9.155). More rows "
+           "→ GBDTs generalize better and the kernel-gap (LB 9.644 vs kernel 9.251, same 3 wells) shrinks. "
+           "Expect sacred to fall toward ~8.7.")
     exp = Experiment.start(
-        version=VER, parent="v5_ensemble",
-        hypothesis=(f"S1a data lever: same 6-model recipe at stride {STRIDE} (v5 was stride-8 → sacred 9.155). "
-                    "More rows → the GBDTs generalize better and the kernel-gap (LB 9.644 vs kernel 9.251 "
-                    "on the same 3 wells) shrinks. Expect sacred to fall toward ~8.7."),
-        predicted_delta=PRED_DELTA, confidence="medium",
-        pipeline_changes=[f"stride {STRIDE} (was 8) — full-data harvest, identical recipe"], cloud_or_local="cloud")
+        version=VER, parent="v5_ensemble", hypothesis=hyp,
+        predicted_delta=PRED_DELTA, confidence="low" if FAST else "medium",
+        pipeline_changes=[f"LGB leaves={_LEAVES}, cat depth={_DEPTH}, stride {STRIDE}"], cloud_or_local="cloud")
 
     oof_d, sac_d, test_d = {}, {}, {}
     for i, (algo, params) in enumerate(MODELS):
