@@ -19,7 +19,10 @@ from pathlib import Path
 
 COMP = "rogii-wellbore-geology-prediction"
 # v5 blend weights (dev-OOF optimized) — only the non-zero members (lgb1/lgb2 were zeroed).
-WEIGHTS = {"v5_lgb0": 0.141, "v5_cat3": 0.114, "v5_cat4": 0.21, "v5_cat5": 0.535}
+# v6s4_fast (lean 4-model, stride-4) — SIMPLE-AVG (equal weights): sacred 9.166, which beat the
+# OOF-optimized blend's 9.192 (the dev-tuned weights overfit). Equal weights generalize more safely
+# to the unseen test wells. Sanity-check submission vs v5 (LB 9.644, sacred 9.155 — essentially tied).
+WEIGHTS = {"v6s4_fast_lgb0": 0.25, "v6s4_fast_cat3": 0.25, "v6s4_fast_cat4": 0.25, "v6s4_fast_cat5": 0.25}
 
 
 def md(t): return {"cell_type": "markdown", "metadata": {}, "source": t.splitlines(keepends=True)}
