@@ -13,6 +13,7 @@ Metric: **RMSE** (↓ better). Source of truth: `experiments.jsonl` (git-tracked
 | [v3_selfcorr](versions/v3_selfcorr.md) | `v3_noselfcorr` | +0.30000 | -0.07738 | 15.25295 | 15.25295 | +0.00000 | Add known-prefix self-correlation features (P1) — judged on sacred. | ⚠ fold_collapse, prediction_sign_mismatch |
 | [v4_kernel9251](versions/v4_kernel9251.md) | `v0_floor` | +3.00000 | +6.42015 | 9.48970 | 9.48970 | +0.00000 | Ported 9.251 feature engine (PF/DTW/beam/NCC/affine/spatial-imputer... | ⚠ fold_collapse, fold_instability, prediction_overshot, multiple_changes |
 | [v5_ensemble](versions/v5_ensemble.md) | `v4_kernel9251` | +0.30000 | +0.33505 | 9.15465 | 9.15465 | +0.00000 | LGB×3 + CatBoost×3(GPU) + supervised dev-OOF blend → push v4's 9.49... |  |
+| [v6s8_fast](versions/v6s8_fast.md) | `v5_ensemble` | +0.00000 | -0.01176 | 9.16642 | 9.16642 | +0.00000 | FAST faithfulness probe: low-capacity profile (LGB leaves 63 / cat ... |  |
 
 ## Commands
 ```
