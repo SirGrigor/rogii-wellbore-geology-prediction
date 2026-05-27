@@ -26,7 +26,7 @@ COMP = "rogii-wellbore-geology-prediction"
 GH_REPO = "SirGrigor/rogii-wellbore-geology-prediction"
 KPU_GIT = "git+https://github.com/SirGrigor/kaggle-playground-utils.git"
 DEPS = ["numpy", "pandas", "scipy", "scikit-learn", "pyarrow", "lightgbm", "xgboost",
-        "matplotlib", "seaborn", "dtaidistance", "joblib", "numba", "catboost", "rich", "torch"]
+        "matplotlib", "seaborn", "dtaidistance", "joblib", "numba", "catboost", "rich", "torch", "tabpfn"]
 ARTIFACT_DIRS = ("probs", "submissions")
 
 DRY = "--dry-run" in sys.argv
