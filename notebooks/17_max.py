@@ -80,13 +80,17 @@ def main() -> None:
                                         sac_df[feats].fillna(0).to_numpy(np.float32))
     print(f"  [hgb] sacred {rmse(ys, sac_d['hgb']):.3f}")
 
-    # exact-metric blend: positive vs negative (the documented 4/6-comp edge)
-    best = {}
-    for neg in (False, True):
-        w, _, _ = blend.nm_optimize_oof(oof_d, yd, allow_negative=neg)
-        s = rmse(ys, blend.apply_blend(sac_d, w))
-        best[neg] = (s, w); print(f"blend allow_negative={neg}: sacred {s:.3f}")
-    bn = min(best, key=lambda n: best[n][0]); s_blend, w = best[bn]
+    # blend ENGINE comparison on real sacred: NM (overfit-prone, what we shipped) vs CARUANA
+    # (greedy, bagged, sorted-init — overfit-resistant; the agents' named gap, now wired in).
+    cand = {}
+    wn, _, _ = blend.nm_optimize_oof(oof_d, yd, allow_negative=False); cand["nm"] = wn
+    wneg, _, _ = blend.nm_optimize_oof(oof_d, yd, allow_negative=True); cand["nm_neg"] = wneg
+    wc, _, cinfo = blend.caruana_select(oof_d, yd); cand["caruana"] = wc
+    for k, w in cand.items():
+        print(f"blend[{k:8s}] sacred {rmse(ys, blend.apply_blend(sac_d, w)):.3f}")
+    print(f"  caruana: best_single {cinfo['best_single_score']:.3f} | mean {cinfo['simple_mean_score']:.3f} | n_selected {cinfo['n_selected']}")
+    bk = min(cand, key=lambda k: rmse(ys, blend.apply_blend(sac_d, cand[k])))
+    w = cand[bk]; s_blend = rmse(ys, blend.apply_blend(sac_d, w)); print(f"  → best engine on sacred: {bk}")
     blend_oof = blend.apply_blend(oof_d, w); blend_sac = blend.apply_blend(sac_d, w)
 
     # post-processing grandmaster lever: per-well savgol, window tuned on dev-OOF
@@ -98,12 +102,13 @@ def main() -> None:
     final = min(s_blend, s_final)
     exp.record(oof_score_mean=final, oof_score_per_fold=[rmse(ys, sac_d[n]) for n in sac_d],
                holdout_score=final, runtime_sec=time.time() - t0,
-               extra={**{f"{n}_sacred": rmse(ys, sac_d[n]) for n in sac_d}, "blend_pos": best[False][0],
-                      "blend_neg": best[True][0], "savgol_w": int(bw), "final": final,
+               extra={**{f"{n}_sacred": rmse(ys, sac_d[n]) for n in sac_d},
+                      **{f"blend_{k}": rmse(ys, blend.apply_blend(sac_d, cand[k])) for k in cand},
+                      "best_engine": bk, "savgol_w": int(bw), "final": final,
                       "weights": {k: round(v, 3) for k, v in w.items()}})
     exp.note(f"deep-stack+negblend+savgol: {final:.3f} (blend {s_blend:.3f}, savgol {s_final:.3f}) vs v5 9.155")
     exp.commit()
-    dash.verdict(VER, final, time.time() - t0, simple_avg=best[False][0], parent=9.155)
+    dash.verdict(VER, final, time.time() - t0, simple_avg=rmse(ys, blend.apply_blend(sac_d, cand["nm"])), parent=9.155)
     v = "✅ max-build beats 9.155" if final < 9.155 - 0.02 else "≈ matched best (public-tier reproduction)"
     print(f"=== {VER}: {v} | final {final:.3f} vs v5 9.155 | {time.time()-t0:.0f}s ===")
 

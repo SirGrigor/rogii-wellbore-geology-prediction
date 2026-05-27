@@ -166,6 +166,21 @@ needing precise absolute formations; precise formations would themselves require
 reconstruction is 6× worse). The structure is real but not an independent lever. Remaining: a booster
 overview (within-paradigm, marginal-blend odds) per user ask; else the understood-ceiling harvest.
 
+## Meta — 4-agent process audit (2026-05-27): the real silver→gold gap is PROCESS, not FE-depth
+External 4-front investigation corrected the agent's "we under-do FE" premise (REFUTED: past losses were
+S6E5 engineered-trap / S6E4 compute-parity-since-closed / Orbit wrong-sport). The real, named, fixable gaps:
+- **Blend ENGINE:** we ship `nm_optimize_oof` (Nelder-Mead, overfit-prone — the v51 burn: holdout 0.954→LB
+  0.952). **`caruana_select` already exists in blend.py but was NEVER WIRED IN.** Proven on synthetic
+  many-model lib: NM HOLD 4.91 (worse than best-single 4.04!) vs Caruana 4.16. Now wired into `17_max.py`
+  (NM vs Caruana head-to-head on real sacred). Rogii caveat: few correlated models → small gap here; the
+  win is reusable + matters with a deep stack & future comps.
+- **Solo-model depth:** single-seed, zero HPO, CatBoost-never-standalone (the audit's one real recurring gap).
+- **Endgame discipline** (silver→gold fork): pick **1 safe-CV-anchor sub + 1 explainable-risk sub**; track
+  CV↔LB correlation. For rogii: v5 (sacred 9.155) = the safe anchor; a risk pick TBD.
+- **Frontier signal levers (rogii):** Soft-DTW differentiable alignment ("creates new signal" — our GRU/
+  point-wise locator was the wrong instance; proper soft-DTW untried) + TabPFN-2.5. These, not the engine,
+  are what could move rogii's signal-flat 9.16.
+
 ## Learned LOCATOR (Phase-2, built PROPERLY) — fails point-wise; explains DTW's edge (2026-05-27)
 Built the real thing (not the strawman CNN): siamese GR-window encoder + locality-constrained soft
 cross-attention over (typewell ∪ prefix) memory, trained end-to-end on TVT drift (src/locator_data.py,
