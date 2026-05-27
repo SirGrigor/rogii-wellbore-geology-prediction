@@ -57,11 +57,18 @@ def main() -> None:
     dev, sacred = cv.sacred_split(data.list_well_ids("train"))
     k9.fit_imputers(dev, TRAIN_DIR)
     dev_df = pd.read_parquet(CACHE / "dev_k9.parquet")
+    # Subsample EARLY (before the float32 copy) to cap peak RAM: the full dev frame is ~5GB float64;
+    # holding it through the copy + LightGBM's C allocator caused exit-137 OOM at stride-4 on a 12.7GB
+    # box. Striding first drops it to 1/STRIDE before anything else (original frame then GC'd). For
+    # stride-1 (no subsample) you still need a high-RAM Colab runtime.
+    if STRIDE > 1:
+        dev_df = dev_df.iloc[::STRIDE].copy()
+        gc.collect()
     sac_df = pd.read_parquet(CACHE / "sacred_k9.parquet")
     feats = [c for c in dev_df.columns if c not in {"well", "id", "target"}]
-    X = dev_df[feats].iloc[::STRIDE].astype("float32")
-    y = dev_df["target"].to_numpy(np.float32)[::STRIDE]
-    g = dev_df["well"].to_numpy()[::STRIDE]
+    X = dev_df[feats].astype("float32")
+    y = dev_df["target"].to_numpy(np.float32)
+    g = dev_df["well"].to_numpy()
     Xs, ys = sac_df[feats].astype("float32"), sac_df["target"].to_numpy(np.float32)
     del dev_df, sac_df; gc.collect()
     sac_floor = rmse(np.zeros_like(ys), ys)
