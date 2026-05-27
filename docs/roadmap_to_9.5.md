@@ -165,6 +165,20 @@ needing precise absolute formations; precise formations would themselves require
 ⇒ **~9.16 is near the GR-alignment ceiling, and GR-alignment is provably the right tool** (geometric
 reconstruction is 6× worse). The structure is real but not an independent lever. Remaining: a booster
 overview (within-paradigm, marginal-blend odds) per user ask; else the understood-ceiling harvest.
+
+## Learned LOCATOR (Phase-2, built PROPERLY) — fails point-wise; explains DTW's edge (2026-05-27)
+Built the real thing (not the strawman CNN): siamese GR-window encoder + locality-constrained soft
+cross-attention over (typewell ∪ prefix) memory, trained end-to-end on TVT drift (src/locator_data.py,
+locator_model.py, docs/locator_design.md). Local validation:
+- **Hard-match baseline** (raw nearest GR-window): unconstrained RMSE **316** (GR repeats → ambiguity);
+  locality-capped ±30 ft still **23.8** (> floor 12.5). Raw window matching is below floor.
+- **Learned locator** (fair random-sample holdout): RMSE **17.5 > floor 12.8, corr −0.40** — val folds
+  also below floor. **Point-wise learned attention does NOT beat predict-zero.**
+- **Why:** DTW's power is the JOINT-SEQUENCE MONOTONIC alignment (continuity: the bit advances in order),
+  not the per-point match. Point-wise attention lacks that inductive bias → per-point GR is too ambiguous.
+  ⇒ a working learned locator must be a **monotonic SEQUENCE aligner (learned DTW)** — research-grade, and
+  competing head-on with the kernel's already-excellent DTW. Low odds, multi-day. Strengthens: DTW is
+  near-optimal; ~9.16 ≈ the real ceiling. Decision pending: attempt the seq-aligner vs understood-ceiling harvest.
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
