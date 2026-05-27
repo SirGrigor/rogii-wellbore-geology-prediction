@@ -16,6 +16,7 @@ Metric: **RMSE** (↓ better). Source of truth: `experiments.jsonl` (git-tracked
 | [v6s8_fast](versions/v6s8_fast.md) | `v5_ensemble` | +0.00000 | -0.01176 | 9.16642 | 9.16642 | +0.00000 | FAST faithfulness probe: low-capacity profile (LGB leaves 63 / cat ... |  |
 | [v6s4_fast](versions/v6s4_fast.md) | `v5_ensemble` | +0.00000 | -0.03711 | 9.19176 | 9.19176 | +0.00000 | FAST faithfulness probe: low-capacity profile (LGB leaves 63 / cat ... |  |
 | [v8_feats](versions/v8_feats.md) | `v6s8_fast` | +0.10000 | +0.00686 | 9.15956 | 9.15956 | +0.00000 | Horizon+geometry (▲Z since PS, md-since-PS, inclination) and GR-tex... | ⚠ prediction_undershot, multiple_changes |
+| [v9_postproc](versions/v9_postproc.md) | `v6s8_fast` | +0.15000 | +0.00054 | 9.16587 | 9.16587 | +0.00000 | border_count=254 (finer splits) + per-well savgol smoothing of the ... | ⚠ prediction_undershot, multiple_changes |
 
 ## Commands
 ```
