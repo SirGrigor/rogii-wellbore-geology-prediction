@@ -55,6 +55,35 @@ class Locator(nn.Module):
         return torch.cat(outs)
 
 
+class SeqLocator(nn.Module):
+    """Sequence aligner — the fix for the point-wise failure. A BiGRU over the ordered post-PS GR makes
+    each query CONTEXT-AWARE (neighbours disambiguate it → continuity), THEN locality-attends to the
+    typewell∪prefix memory, then a residual 1D-smooth enforces a coherent drift trajectory. Continuity
+    (not strict monotonicity — the bit wanders up/down) is the right inductive bias DTW's edge approximates.
+    """
+    def __init__(self, d=64, h=64, drop=0.1, loc_lambda=3e-4):
+        super().__init__()
+        self.enc = WinEncoder(d, drop)
+        self.gru = nn.GRU(d, h, batch_first=True, bidirectional=True)
+        self.q_proj = nn.Linear(2 * h, d)
+        self.scale = d ** 0.5
+        self.log_lambda = nn.Parameter(torch.tensor(float(np.log(loc_lambda))))
+        self.smooth = nn.Conv1d(1, 1, 5, padding=2)             # residual sequence smoothing of the drift
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, q_gr, mem_gr, mem_val, **_):
+        qe = self.enc(q_gr)                                     # [nq, d] local GR-window embeddings
+        seq, _ = self.gru(qe.unsqueeze(0))                      # [1, nq, 2h] sequence context
+        q = self.drop(self.q_proj(seq.squeeze(0)))             # [nq, d] context-aware query
+        k = self.enc(mem_gr); v = mem_val                       # [nm, d], [nm]
+        loc = -torch.exp(self.log_lambda) * v.pow(2)            # locality bias (anchor near last-known)
+        a = torch.softmax(q @ k.t() / self.scale + loc[None, :], 1)
+        raw = a @ v                                             # [nq] attended drift
+        if getattr(self, "_raw_only", False):
+            return raw
+        return raw + self.smooth(raw[None, None, :]).squeeze(0).squeeze(0)   # residual smooth
+
+
 def _aug(gr, train, noise=0.05, jitter=2):
     if not train:
         return gr
@@ -65,13 +94,14 @@ def _aug(gr, train, noise=0.05, jitter=2):
 
 
 def train_cv(dev_eps, sac_eps, test_eps, n_folds=5, epochs=25, lr=1e-3, d=64,
-             patience=5, device=None, seed=7, mem_sub=4000):
+             patience=5, device=None, seed=7, mem_sub=4000, model_cls=None, accum=4):
     """By-well CV over episodes → (oof dict{id:pred}, sac dict, test dict, fold_rmse).
     mem_sub: cap memory slots per episode (subsample) for speed/regularisation."""
     import gc
     from sklearn.model_selection import GroupKFold
     from .evaluate import rmse
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    model_cls = model_cls or Locator
     torch.manual_seed(seed); rng = np.random.default_rng(seed)
     wells = np.array([e.well for e in dev_eps])
 
@@ -108,9 +138,9 @@ def train_cv(dev_eps, sac_eps, test_eps, n_folds=5, epochs=25, lr=1e-3, d=64,
                 pred = model(_aug(torch.from_numpy(e.q_gr).to(device), True),
                              _aug(torch.from_numpy(mg).to(device), True),
                              torch.from_numpy(mv).to(device))
-                loss = nn.functional.mse_loss(pred[m], y[m]) / 4
+                loss = nn.functional.mse_loss(pred[m], y[m]) / accum
                 loss.backward(); acc += 1
-                if acc % 4 == 0:                              # grad-accum over wells → stable step
+                if acc % accum == 0:                          # grad-accum over wells → stable step
                     opt.step(); opt.zero_grad()
             opt.step(); opt.zero_grad()
             # val
