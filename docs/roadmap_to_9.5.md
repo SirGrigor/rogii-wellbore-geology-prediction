@@ -12,9 +12,15 @@ the only number we trust** (dev OOF overfits; the 3-well LB is noise).
 | Deotte GBDT starter | ~15 (CV) | ≈ our geometry+align models — naive-GBDT level |
 | our best so far (v1 lgb) | 14.45 | still above floor (overfits) |
 | **top public ensemble** | **9.25** | the full recipe below |
-| **our target** | **~9.5** | medal band (silver ≈ rank 82 / 1638) |
+| ~~our old target~~ | ~~9.5~~ | ✅ beaten (sacred 9.155) — superseded |
+| **v5_ensemble (submitted)** | sacred **9.155** | **LB 9.644** (3-well, noisy). Same 3 wells: kernel **9.251** vs us **9.644** → **~0.4 ft fidelity+data gap** (we train on 1/8 rows; kernel uses all) |
+| **NEW target** | **~8.2** | winning-pool moved here (below old public best 9.25 → needs new signal, not just the port) |
 
-Gap to close: **14.08 → 9.5 ≈ 4.6 ft**, distributed across the recipe's components (no single
+Gap to close (reset 2026-05-27): **9.155 → 8.2 ≈ 0.95 ft sacred**. The old 9.25 public best is no
+longer enough — the pool moved to 8.2, so part of this gap requires *orthogonal* signal beyond the
+ported kernel, not only refinement. See "Descent to 8.2" below.
+
+Gap to close (historical): **14.08 → 9.5 ≈ 4.6 ft**, distributed across the recipe's components (no single
 one does it — proven: naive DTW 113, Viterbi 47, self-corr 20, all > floor).
 
 ## Measurement protocol (what makes this "measurable")
@@ -40,6 +46,25 @@ Expected deltas are HYPOTHESES (the kernels give no ablation) — the point is t
 **M3 DONE (2026-05-26).** Sacred 9.155 on stride-8 (1/8 data), no tuning. Headroom remains: lower stride
 (more data) + target transform. Caveat: 9.155 is our *sacred* (150 train wells); the 3-well LB is a
 separate noisy check — submit once to confirm scale, trust sacred for decisions.
+
+---
+
+## Descent to 8.2 (reset 2026-05-27, after first LB)
+First LB confirmed scale (v5 LB 9.644). Sequenced cheap→expensive, each MEASURED on sacred with a
+written hypothesis+predicted_delta FIRST (diary rule). Stop adding when sacred plateaus; periodically
+confirm on LB but **decide on sacred**.
+
+| stage | lever | why it should generalize | predicted sacred | measured |
+|---|---|---|---|---|
+| **S1a** | **full data: stride 8 → 1** (LGB binned is memory-safe; cat-GPU on full) | the kernel trains on all rows; GBDTs scale with data. Closes the *data* half of the kernel gap | 9.155 → **~8.7** | — |
+| **S1b** | **per-well prediction smoothing** along MD (Savitzky-Golay / robust spline on the drift curve) | TVT along a wellbore is a smooth geological surface; GBDT predicts rows independently → jitter. Physical prior, ~free | −0.1…−0.3 | — |
+| **S1c** | **fidelity diff vs the 9.251 kernel** (features identical? its GBDT params? any post-proc/clipping?) | on the SAME 3 LB wells kernel=9.251 vs us=9.644 → a concrete gap to close against a known number (G3) | toward 9.25 LB | — |
+| **S2** | **decorrelated NN: 1D-CNN/GRU on (GR seq + trajectory) → drift**, blended/stacked with the GBDT | the port is target-FREE DTW; a *supervised* sequence model learns GR→TVT directly → orthogonal signal. This is the lever that beats the moved pool (8.2 < old public 9.25). Compute-parity: Deotte ⇒ out-GBDT-ing him is hard; our edge is the NN | **~8.4** | — |
+| **S3** | refine: target transform (Huber/per-step Δ), feature selection, stacking>blend | squeeze variance once new signal is in | **~8.2** | — |
+
+**Decision gate G4 (after S1):** if full-data + smoothing + fidelity-fix doesn't get sacred ≲ 8.6 / LB
+≲ 9.25, the gap is structural → go to S2 (new model family), don't keep tuning GBDT. **Lead with new
+signal (data, NN, features), not HPO** (HPO refines existing signal; it won't move a 1-ft wall).
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well

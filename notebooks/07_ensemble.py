@@ -26,6 +26,9 @@ from src.observer import Experiment
 
 CACHE = Path(os.environ.get("DRIVE_ROOT") or "data") / "cache"
 STRIDE = int(os.environ.get("ROGII_ROW_STRIDE") or 8)
+VER = f"v6s{STRIDE}"  # stride-aware version (S1a data ladder); v5_ensemble was stride-8 → sacred 9.155
+# predicted improvement over v5's 9.155 as we add data (8→4→2→1) — hypothesis-first (diary rule)
+PRED_DELTA = {4: 0.20, 2: 0.35, 1: 0.45}.get(STRIDE, 0.10)
 
 LGB_BASE = dict(num_leaves=255, min_child_samples=15, subsample=0.8, subsample_freq=1,
                 colsample_bytree=0.8, reg_lambda=3.0, reg_alpha=0.05)
@@ -59,17 +62,19 @@ def main() -> None:
                                is_train=False, label="test_v5")
     Xt = test_df[feats].astype("float32")
     anchor_t = test_df["last_known_tvt"].to_numpy(float)
-    print(f"X {X.shape} (stride {STRIDE}) | {len(feats)} feats | sac_floor {sac_floor:.3f} | v4 was 9.490")
+    print(f"[{VER}] X {X.shape} (stride {STRIDE}) | {len(feats)} feats | sac_floor {sac_floor:.3f} | v5 stride8 was 9.155")
 
     exp = Experiment.start(
-        version="v5_ensemble", parent="v4_kernel9251",
-        hypothesis="LGB×3 + CatBoost×3(GPU) + supervised dev-OOF blend → push v4's 9.49 toward/below 9.25.",
-        predicted_delta=0.3, confidence="medium",
-        pipeline_changes=["6-model ensemble + nm_optimize_oof blend"], cloud_or_local="cloud")
+        version=VER, parent="v5_ensemble",
+        hypothesis=(f"S1a data lever: same 6-model recipe at stride {STRIDE} (v5 was stride-8 → sacred 9.155). "
+                    "More rows → the GBDTs generalize better and the kernel-gap (LB 9.644 vs kernel 9.251 "
+                    "on the same 3 wells) shrinks. Expect sacred to fall toward ~8.7."),
+        predicted_delta=PRED_DELTA, confidence="medium",
+        pipeline_changes=[f"stride {STRIDE} (was 8) — full-data harvest, identical recipe"], cloud_or_local="cloud")
 
     oof_d, sac_d, test_d = {}, {}, {}
     for i, (algo, params) in enumerate(MODELS):
-        name = f"v5_{algo}{i}"
+        name = f"{VER}_{algo}{i}"
         res = train.train_variant(name, algo, X, y, g, params=params, save=True, fit_full=True, use_gpu="auto")
         full = joblib.load(train.PROBS / name / "model_full.pkl")
         oof_d[name], sac_d[name], test_d[name] = res.oof, full.predict(Xs), full.predict(Xt)
@@ -89,13 +94,14 @@ def main() -> None:
                holdout_score=sac_rmse, runtime_sec=time.time() - t0,
                extra={"sac_floor": sac_floor, "simple_avg": simple, "v4_sacred": 9.490,
                       "weights": {k: round(v, 3) for k, v in w.items()}})
-    exp.note(f"6-model blend sacred {sac_rmse:.3f} vs v4 9.490 vs floor {sac_floor:.3f}")
+    exp.note(f"{VER}: stride {STRIDE} 6-model blend sacred {sac_rmse:.3f} vs v5(stride8) 9.155 vs floor {sac_floor:.3f}")
     exp.commit()
 
     tvt = blend.apply_blend(test_d, w) + anchor_t
     ss = submission.build_submission(dict(zip(test_df["id"], tvt)))
-    out = submission.save_submission(ss, "v5_ensemble")
-    print(f"wrote {out}\n=== v5 done in {time.time()-t0:.0f}s | SACRED {sac_rmse:.3f} (v4 9.490, floor {sac_floor:.3f}) ===")
+    out = submission.save_submission(ss, VER)
+    print(f"wrote {out}\n=== {VER} done in {time.time()-t0:.0f}s | SACRED {sac_rmse:.3f} "
+          f"(v5 stride8 9.155, floor {sac_floor:.3f}) ===")
 
 
 if __name__ == "__main__":

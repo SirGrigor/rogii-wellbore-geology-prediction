@@ -58,11 +58,32 @@ def _locate_src():
 
 root = _locate_src()
 sys.path.insert(0, str(root)); print("src from:", root, "| files:", len(list((root/'src').glob('*.py'))))
-os.environ["ROGII_DATA_DIR"] = "/kaggle/input/{COMP}"     # so src.data reads the comp data
+
+# Auto-discover the competition data dir — robust to however Kaggle mounts it. We don't trust
+# a hardcoded /kaggle/input/<comp> path; we find the dir that actually CONTAINS train/ + test/
+# horizontal wells. (rogii-code/rogii-models have no such layout, so they won't false-match.)
+def _find_data_dir():
+    for d in sorted(glob.glob("/kaggle/input/*")):
+        if glob.glob(f"{{d}}/**/test/*__horizontal_well.csv", recursive=True) \\
+           and glob.glob(f"{{d}}/**/train/*__horizontal_well.csv", recursive=True):
+            # RAW must be the dir whose children are train/ and test/
+            t = glob.glob(f"{{d}}/**/test/*__horizontal_well.csv", recursive=True)[0]
+            return str(Path(t).parent.parent)
+    return None
+
+_data = _find_data_dir()
+if not _data:
+    print("!! competition data NOT found. Full /kaggle/input tree:")
+    for f in sorted(glob.glob("/kaggle/input/**", recursive=True))[:200]:
+        print("  ", f)
+    raise SystemExit("Attach the 'rogii-wellbore-geology-prediction' competition (Add Data → "
+                     "Competitions) so train/+test/ mount under /kaggle/input.")
+os.environ["ROGII_DATA_DIR"] = _data                       # so src.data reads the comp data
 import joblib                                              # noqa: E402
 from src import cv, data, kernel9251 as k9, submission     # noqa: E402
 from src.config import TRAIN_DIR                            # noqa: E402
-print("test wells:", data.list_well_ids("test"))
+print("comp data:", _data, "| train:", len(data.list_well_ids("train")),
+      "| test:", data.list_well_ids("test"))
 """),
     md("## 2. Build the 222 features for the test wells (imputers fit on the same dev split)"),
     code("""dev, _ = cv.sacred_split(data.list_well_ids("train"))   # deterministic — matches training
@@ -76,12 +97,16 @@ print("test features:", Xt.shape)
 """),
     md("## 3. Load the v5 models, blend, de-residualize → submission.csv"),
     code(f"""WEIGHTS = {json.dumps(WEIGHTS)}
+# Discover models wherever the rogii-models dataset mounted (don't hardcode the path —
+# Kaggle nests some inputs). Map {{model_name: path}} by the parent-dir name of each pkl.
+_mp = {{Path(p).parent.name: p
+       for p in glob.glob("/kaggle/input/**/model_full.pkl", recursive=True)}}
+_mp.update({{Path(p).stem: p for p in glob.glob("/kaggle/input/**/v5_*.pkl", recursive=True)}})
+print("models found:", sorted(_mp))
 blend = np.zeros(len(Xt), dtype=float)
 for name, w in WEIGHTS.items():
-    hits = (glob.glob(f"/kaggle/input/rogii-models/**/{{name}}/model_full.pkl", recursive=True)
-            or glob.glob(f"/kaggle/input/rogii-models/**/{{name}}.pkl", recursive=True))
-    assert hits, f"model {{name}} not found under /kaggle/input/rogii-models"
-    blend += w * joblib.load(hits[0]).predict(Xt)
+    assert name in _mp, f"model {{name}} not found (have {{sorted(_mp)}})"
+    blend += w * joblib.load(_mp[name]).predict(Xt)
 tvt = blend + anchor                                        # de-residualize: drift + last-known TVT
 ss = submission.build_submission(dict(zip(test_df["id"], tvt)))
 ss.to_csv("/kaggle/working/submission.csv", index=False)
