@@ -22,6 +22,7 @@ Metric: **RMSE** (↓ better). Source of truth: `experiments.jsonl` (git-tracked
 | [v13_boosters](versions/v13_boosters.md) | `v6s8_fast` | +0.05000 | -0.00923 | 9.17564 | 9.17564 | +0.00000 | A more diverse booster set (lgb/cat/xgb/HistGB) gives a decorrelate... | ⚠ prediction_sign_mismatch |
 | [v14_locator](versions/v14_locator.md) | `v6s8_fast` | +0.10000 | -0.00425 | 9.17067 | 9.17067 | +0.00000 | A SUPERVISED sequence aligner (BiGRU + locality cross-attention to ... | ⚠ fold_collapse, fold_instability, prediction_sign_mismatch |
 | [v15_squeeze](versions/v15_squeeze.md) | `v6s8_fast` | +0.10000 | +0.01132 | 9.15510 | 9.15510 | +0.00000 | Negative-weight blend extracts lift from correlated members (CNN/lo... | ⚠ prediction_undershot, multiple_changes |
+| [v18_optuna](versions/v18_optuna.md) | `v16_max` | +0.05000 | — | 9.14219 | 9.14219 | +0.00000 | Optuna HPO on CatBoost (the audit's missing depth lever — we never ... |  |
 
 ## Commands
 ```
