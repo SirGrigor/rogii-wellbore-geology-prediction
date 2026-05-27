@@ -191,7 +191,10 @@ def _train_impl(version, algo, X, y, groups, X_test, params, n_folds, save, fit_
     defaults = {"lgb": _lgb_defaults, "xgb": _xgb_defaults, "cat": _cat_defaults}[algo](gpu)
     defaults.update(params or {})
     dev = "GPU" if (gpu and algo in ("xgb", "cat")) else "CPU"
-    print(f"[train] {algo} on {dev} (gpu_available={gpu}); early stopping rounds={EARLY_STOPPING_ROUNDS}")
+    # NB: 'on CPU' for lgb is BY DESIGN (LightGBM's Colab pip wheel has no GPU build), NOT a missing
+    # GPU — cat/xgb still use the T4. The old 'gpu_available=' label wrongly implied no GPU; fixed.
+    note = " (LightGBM: no Colab GPU build → CPU by design; cat/xgb use the GPU)" if algo == "lgb" else ""
+    print(f"[train] {algo} on {dev}{note}; early stopping rounds={EARLY_STOPPING_ROUNDS}")
 
     X = X.reset_index(drop=True)
     y = np.asarray(y, dtype=float)
