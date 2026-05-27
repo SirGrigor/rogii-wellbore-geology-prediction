@@ -62,6 +62,11 @@ confirm on LB but **decide on sacred**.
 | **S2** | **decorrelated NN: 1D-CNN/GRU on (GR seq + trajectory) → drift**, blended/stacked with the GBDT | the port is target-FREE DTW; a *supervised* sequence model learns GR→TVT directly → orthogonal signal. This is the lever that beats the moved pool (8.2 < old public 9.25). Compute-parity: Deotte ⇒ out-GBDT-ing him is hard; our edge is the NN | **~8.4** | — |
 | **S3** | refine: target transform (Huber/per-step Δ), feature selection, stacking>blend | squeeze variance once new signal is in | **~8.2** | — |
 
+**LB IS NOISE — confirmed (2026-05-27):** v6s4_fast (sacred 9.166, ~tied with v5's 9.155) scored **LB
+10.085** vs v5's **9.644** — a 0.44 swing on 3 wells between sacred-equivalent models. ⇒ the 3-well LB
+cannot rank our models; **decide on sacred, always.** v5 stays the locked submission. Makes S1c
+(chase the 9.64-vs-9.25 LB gap) a clear noise-chase — deprioritized.
+
 **FAST proxy validated (2026-05-27, v6s8_fast):** 63-leaf/depth-6 at stride-8 → sacred **9.166** vs v5's
 255/depth-7 **9.155** (Δ+0.011 = noise) in **53 min** (~1.7× faster; ceiling is cat-GPU rounds, not LGB
 leaves). ⇒ **iterate the ladder in `ROGII_FAST=1`**; 255 adds no measured quality, kept only for a final
