@@ -20,6 +20,7 @@ Metric: **RMSE** (↓ better). Source of truth: `experiments.jsonl` (git-tracked
 | [v10_tabpfn](versions/v10_tabpfn.md) | `v6s8_fast` | +0.10000 | +0.08579 | 9.08063 | 9.08063 | +0.00000 | TabPFN (in-context tabular foundation model) is a different functio... | ⚠ fold_collapse, fold_instability |
 | [v12_spatialdip](versions/v12_spatialdip.md) | `v6s8_fast` | +0.10000 | -0.00425 | 9.17067 | 9.17067 | +0.00000 | Frame-independent cross-well dip (neighbours' TVT-plane gradient → ... | ⚠ prediction_sign_mismatch |
 | [v13_boosters](versions/v13_boosters.md) | `v6s8_fast` | +0.05000 | -0.00923 | 9.17564 | 9.17564 | +0.00000 | A more diverse booster set (lgb/cat/xgb/HistGB) gives a decorrelate... | ⚠ prediction_sign_mismatch |
+| [v14_locator](versions/v14_locator.md) | `v6s8_fast` | +0.10000 | -0.00425 | 9.17067 | 9.17067 | +0.00000 | A SUPERVISED sequence aligner (BiGRU + locality cross-attention to ... | ⚠ fold_collapse, fold_instability, prediction_sign_mismatch |
 
 ## Commands
 ```
