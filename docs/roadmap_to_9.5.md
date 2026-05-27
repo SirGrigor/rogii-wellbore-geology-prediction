@@ -140,6 +140,21 @@ exploiting it, not headroom. **Untouched lever:** the TARGET/LOSS — all 7 kept
 diagnostic finding (large-drift under-prediction 5.4→16.2 = mean-regression) is a loss symptom. Next directed
 test: sample-weighting / de-regression / Huber. If flat too → representation saturated; only a paradigm change
 (GNN/seq2seq over the well-field) or accepting ~9.16 near-ceiling remains.
+
+## 💡 STRUCTURAL FINDING — TVT is a geometric identity (2026-05-27, re-examination)
+Stepped out of the kernel's GR-alignment worldview; read the .pptx brief + raw EDA. Found:
+- **`TVT = −Z + g(formations) + const_well`**, exactly. Per-well fit: **Z coef = −1.000, std 0.0000** (all
+  297 wells); pooled `drift = −dz + Δg(formations)` → **RMSE 0.007**. TVT is *defined* by the bit depth Z
+  (known for test) relative to the 6 near-parallel dipping formation surfaces. **GR is only an indirect proxy
+  to locate those surfaces.** (Shared-typewell transfer is dead — test wells have unique typewells.)
+- ⇒ **The entire ~9.16 error is FORMATION-IMPUTATION error.** Test lacks formations; the kernel imputes them
+  only as side-features for a GR-GBDT. **New paradigm (evidence-grounded): impute the 6 formation surfaces
+  accurately → reconstruct TVT via the identity.** Genuinely different from GR-alignment, AND imputation
+  accuracy is **directly measurable on train** (true formations known) — a tight loop the GR paradigm lacks.
+- **Next experiment (S-formation):** hold out train wells → spatially impute their 6 formation surfaces from
+  neighbours (validate vs known, ft-level) → reconstruct drift = −dz + Δg → sacred RMSE. Blend with the GBDT
+  (decorrelated path). If imputation beats the kernel's incidental one → breaks the wall. Caveat: isolated
+  wells (sparse neighbours) impute worst — and the 3 test wells may be isolated (limits LB, not sacred).
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
