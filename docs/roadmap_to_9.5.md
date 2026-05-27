@@ -166,6 +166,16 @@ needing precise absolute formations; precise formations would themselves require
 reconstruction is 6× worse). The structure is real but not an independent lever. Remaining: a booster
 overview (within-paradigm, marginal-blend odds) per user ask; else the understood-ceiling harvest.
 
+## Depth lever banked at sacred 9.100; Optuna HPO did NOT extend it (2026-05-28)
+- **17_max (deep stack: cat depth-7/border-254 ×2 + LGB-255 ×2 + HistGB, stride-2, nm_neg blend) → 9.100**
+  — first break below the old 9.16 "ceiling". Driver = model DEPTH (the audit's named gap): deeper cat
+  9.120 solo vs old ~9.17. **Best result to date; the false ceiling is broken.**
+- **19_optuna HPO → 9.142 (worse).** HPO on a stride-16 subsample found over-regularized `depth=6` params
+  suited to 190K rows; they underfit the full data (tuned cats 9.187/9.231 < hand-set depth-7 9.120).
+  Lesson: **HPO on a subsample tunes for the wrong data size** — the hand depth-7 config already beat it.
+  Re-HPO at full stride = ~4 h for an uncertain small gain → not worth it. Depth lever banked at 9.100.
+- Next: **C — Soft-DTW signal lever** (the real reach toward 8.x; depth/blend are incremental).
+
 ## Meta — 4-agent process audit (2026-05-27): the real silver→gold gap is PROCESS, not FE-depth
 External 4-front investigation corrected the agent's "we under-do FE" premise (REFUTED: past losses were
 S6E5 engineered-trap / S6E4 compute-parity-since-closed / Orbit wrong-sport). The real, named, fixable gaps:
