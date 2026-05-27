@@ -179,6 +179,21 @@ locator_model.py, docs/locator_design.md). Local validation:
   ⇒ a working learned locator must be a **monotonic SEQUENCE aligner (learned DTW)** — research-grade, and
   competing head-on with the kernel's already-excellent DTW. Low odds, multi-day. Strengthens: DTW is
   near-optimal; ~9.16 ≈ the real ceiling. Decision pending: attempt the seq-aligner vs understood-ceiling harvest.
+
+**SeqLocator full run (v14, 67 min on Colab) — NO LIFT.** fold val 13.5–16.1 (≈/above floor — fails to
+train below it even at full scale + GPU); locator-alone sacred 14.15 (oof corr 0.305, real-but-weak;
+calib a=1.005 → the smoke-test inversion was a near-init artifact, no bug); **loc⊕kernel 9.171 = kernel
+9.171, loc weight 0.000, resid corr 0.705.** Positive blending discards it (correlated). Per the
+agreed gate, the locator is done.
+
+## KB investigation → cheap untried levers (16_squeeze, 2026-05-27)
+Traversed the knowledge graph + verified in-repo. The recurring failure (CNN/TabPFN/locator all correlate
+ρ0.6–0.9 → 0 POSITIVE weight) is exactly what **negative-weight blending** targets (subtract correlated
+error; survey: extracts lift NM-positive can't; L48 caveat: fit on OOF, eval sacred). `notebooks/16_squeeze.py`:
+(A) negative- vs positive-weight blend over {kernel-cat, CNN, locator} reusing saved OOFs; (B) RMSE-cage
+variance expansion (fixes the measured under-dispersion / large-drift under-prediction); (C) dev-vs-sacred
+adversarial AUC (S6E5 was 0.50038 = true ceiling — does sacred agree?). All cheap, gate-on-sacred. If flat
++ AUC≈0.5 → true-ceiling harvest with certainty.
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
