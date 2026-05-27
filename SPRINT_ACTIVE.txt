@@ -1,4 +1,4 @@
-notebooks/16_squeeze.py
+notebooks/18_autofe.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
