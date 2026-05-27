@@ -106,6 +106,19 @@ reveal what we're missing — and our last two bets used the **wrong instance** 
 
 **Revised descent (evidence-backed):** S3a savgol+clip post-proc → S3b uncertainty/divergence feats →
 S3c TabICL stack member → S3d ridge/NNLS stack. Medal looks reachable (method, not compute).
+
+## ⚠ Reframe — public ceiling ≈ where we are; the 8.2 LB is NOISE (2026-05-27, after S3a)
+**S3a flat (5th flat result):** savgol Δ−0.005 (noise), border_count=254 Δ+0.026 (hurt), uncertainty
+feats already in the 222. Re-reading recon corrects an earlier over-claim:
+- **Every PUBLIC kernel is our tier (~9.0):** romantamrazov "TOP-3" is *stale* (LB moved) and targets <9.0
+  not 8.0; mitch 8.9; kojimar's TabICL stack isn't in the top-20 either. The 7.97–8.6 leaders are **private**
+  — we do NOT actually know what reaches the medal pool.
+- **The 8.2 'pool' is on the 3-well PUBLIC LB = NOISE** (we proved 0.44 swings for sacred-tied models, v6).
+  Chasing it violates our own decide-on-sacred rule. The medal is the **private** LB (full test), where our
+  robustly-validated **sacred 9.16** is the honest estimate — and may rank far better than the noisy public 8.2.
+- **We're not failing — we matched the public ceiling with disciplined CV.** Remaining genuine-sacred bets:
+  **TabICL** (decorrelated family; uncertain — public TabICL isn't top-tier) and a cheap more-iterations test.
+  If those are flat too, harvest a robust 9.16 + the reusable toolkit (portfolio-over-medals).
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
