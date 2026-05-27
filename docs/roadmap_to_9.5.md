@@ -131,6 +131,15 @@ independently — it structurally can't see what neighbours reveal about the sha
 queued: cross-well dip field (neighbours' prefix dTVT/d-displacement → local dip → drift; frame-independent,
 so it dodges the falsified absolute-TVT M1; leakage-free via known prefixes), per-step increment target,
 joint field/graph model. (docs/postmortem.md = the fallback if the search dead-ends, not the current plan.)
+
+**Cross-well dip — FLAT (v12_spatialdip, 7th flat).** Frame-independent neighbour-dip features (local
+validation corr 0.32, FAR 0.37>NEAR 0.28 — signal real) added ZERO marginal Δ on sacred (+0.007; far −0.005;
+CatBoost barely split on them). ⇒ the kernel's formation-plane-KNN ALREADY captures the cross-well dip; the
+222-feature *representation* is saturated. The latent spatial advantage (near 5.54 vs far 7.50) is the kernel
+exploiting it, not headroom. **Untouched lever:** the TARGET/LOSS — all 7 kept MSE-on-drift, but the biggest
+diagnostic finding (large-drift under-prediction 5.4→16.2 = mean-regression) is a loss symptom. Next directed
+test: sample-weighting / de-regression / Huber. If flat too → representation saturated; only a paradigm change
+(GNN/seq2seq over the well-field) or accepting ~9.16 near-ceiling remains.
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
