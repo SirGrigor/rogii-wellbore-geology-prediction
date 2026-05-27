@@ -56,7 +56,7 @@ confirm on LB but **decide on sacred**.
 
 | stage | lever | why it should generalize | predicted sacred | measured |
 |---|---|---|---|---|
-| **S1a** | **full data: stride 8 → 1** (LGB binned is memory-safe; cat-GPU on full) | the kernel trains on all rows; GBDTs scale with data. Closes the *data* half of the kernel gap | 9.155 → **~8.7** | — |
+| **S1a** | **full data: stride 8 → 1** (LGB binned is memory-safe; cat-GPU on full) | the kernel trains on all rows; GBDTs scale with data. Closes the *data* half of the kernel gap | 9.155 → **~8.7** | ✗ **FALSIFIED (2026-05-27):** stride-8 9.166 → stride-4 (2× data) **9.192** — flat/worse. Data lever exhausted; not data-limited. **Ladder stopped** (stride-2/1 would also ~9.16). Capacity also flat (63≈255) ⇒ both GBDT levers dead → **G4: pivot to S2 (new signal)**. Note: simple-avg 9.166 < OOF-blend 9.192 (blend overfits dev w/ 4 corr. models) |
 | **S1b** | **per-well prediction smoothing** along MD (Savitzky-Golay / robust spline on the drift curve) | TVT along a wellbore is a smooth geological surface; GBDT predicts rows independently → jitter. Physical prior, ~free | −0.1…−0.3 | — |
 | **S1c** | **fidelity diff vs the 9.251 kernel** (features identical? its GBDT params? any post-proc/clipping?) | on the SAME 3 LB wells kernel=9.251 vs us=9.644 → a concrete gap to close against a known number (G3) | toward 9.25 LB | — |
 | **S2** | **decorrelated NN: 1D-CNN/GRU on (GR seq + trajectory) → drift**, blended/stacked with the GBDT | the port is target-FREE DTW; a *supervised* sequence model learns GR→TVT directly → orthogonal signal. This is the lever that beats the moved pool (8.2 < old public 9.25). Compute-parity: Deotte ⇒ out-GBDT-ing him is hard; our edge is the NN | **~8.4** | — |
