@@ -68,6 +68,86 @@ def nm_optimize_oof(
     }
 
 
+def caruana_select(
+    oof: dict[str, np.ndarray],
+    y: np.ndarray,
+    *,
+    score_fn=rmse,
+    greater_is_better: bool = False,
+    n_bag: int = 20,
+    bag_frac: float = 0.5,
+    n_init: int = 1,
+    max_iters: int = 100,
+    rank_norm: bool = False,
+    seed: int = 42,
+) -> tuple[dict[str, float], float, dict]:
+    """Caruana greedy ensemble selection — with replacement, bagged, sorted-init.
+
+    Caruana et al. 2004/2006 (ICML/ICDM). The overfit-RESISTANT alternative to
+    `nm_optimize_oof`: greedily add the one member (with replacement) that most
+    improves the OOF metric, starting from the best single model, repeated over
+    bootstrap subsets of the model LIBRARY and averaged. Weights are selection
+    counts → strictly positive, and no member can be driven to a degenerate weight
+    the way Nelder-Mead can (that overfit burned us in S6E5 v51). This is the
+    documented engine behind recent 1st-place tabular finishes (KG L56) and the
+    blend method we previously lacked.
+
+    Optimize+select on the LABELED OOF only (never LB/holdout — L53).
+    `score_fn(y_true, y_pred) -> float`; `greater_is_better` flips RMSE↔AUC.
+    Returns (weights summing to 1, OOF score of the bagged blend, info dict).
+    """
+    names, P = _stack(oof, rank_norm)              # P: (n_rows, n_members)
+    y = np.asarray(y, dtype=float)
+    n_members = len(names)
+    if n_members == 1:
+        return {names[0]: 1.0}, float(score_fn(y, P[:, 0])), {"n_members": 1}
+
+    sign = 1.0 if greater_is_better else -1.0
+    def gain(pred: np.ndarray) -> float:           # higher == better, always
+        return sign * float(score_fn(y, pred))
+
+    solo = np.array([gain(P[:, i]) for i in range(n_members)])
+    rng = np.random.default_rng(seed)
+    total = np.zeros(n_members)                    # accumulated per-bag weight votes
+
+    for _ in range(n_bag):
+        k = min(n_members, max(2, int(np.ceil(bag_frac * n_members))))
+        lib = rng.choice(n_members, size=k, replace=False)
+        order = lib[np.argsort(-solo[lib])]        # sorted init: best members first
+        counts = np.zeros(n_members)
+        init = order[: max(1, min(n_init, len(order)))]
+        for i in init:
+            counts[i] += 1.0
+        cur_sum = P[:, init].sum(axis=1).astype(float)
+        cur_n = float(counts.sum())
+        best = gain(cur_sum / cur_n)
+        for _ in range(max_iters):
+            scores = [(gain((cur_sum + P[:, j]) / (cur_n + 1)), j) for j in lib]
+            s, j = max(scores, key=lambda t: t[0])
+            if s <= best + 1e-12:                  # no further improvement
+                break
+            counts[j] += 1.0
+            cur_sum = cur_sum + P[:, j]
+            cur_n += 1.0
+            best = s
+        total += counts / counts.sum()             # equal vote per bag
+
+    w = total / total.sum()
+    weights = dict(zip(names, w.tolist()))
+    blend_score = float(score_fn(y, P @ w))
+    bi = int(np.argmax(solo))
+    info = {
+        "n_members": n_members, "n_bag": n_bag, "bag_frac": bag_frac,
+        "n_init": n_init, "rank_norm": rank_norm,
+        "best_single": names[bi],
+        "best_single_score": float(score_fn(y, P[:, bi])),
+        "simple_mean_score": float(score_fn(y, P.mean(axis=1))),
+        "blend_score": blend_score,
+        "n_selected": int((w > 1e-4).sum()),
+    }
+    return weights, blend_score, info
+
+
 def apply_blend(preds: dict[str, np.ndarray], weights: dict[str, float],
                 rank_norm: bool = False) -> np.ndarray:
     """Weighted blend of (test) predictions using the OOF-fitted weights."""

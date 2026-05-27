@@ -100,3 +100,39 @@ def test_blend_nm_oof_improves_and_normalizes():
     assert w["good"] > w["bad"]                                   # weights the better member up
     rep = blend.marginal_report({"good": good, "bad": bad}, y)
     assert rep[0]["member"] == "good"
+
+
+def test_caruana_beats_best_single_and_naive_mean():
+    # Two good members with INDEPENDENT noise (so averaging them helps) + one junk
+    # member. Caruana must beat both the best single AND the naive 3-way mean
+    # (by down-weighting the junk), and drive the junk weight to ~0.
+    rng = np.random.default_rng(0)
+    y = rng.normal(size=2000)
+    a = y + rng.normal(0, 0.6, 2000)        # good, indep noise
+    b = y + rng.normal(0, 0.6, 2000)        # good, indep noise
+    junk = rng.normal(0, 3.0, 2000)         # uncorrelated garbage
+    oof = {"a": a, "b": b, "junk": junk}
+
+    w, blend_rmse, info = blend.caruana_select(oof, y, n_bag=15, seed=0)
+    assert abs(sum(w.values()) - 1.0) < 1e-6
+    # beats the best single member (independent-noise averaging) ...
+    assert blend_rmse < info["best_single_score"] - 1e-6
+    # ... and the naive mean (which is dragged down by junk) ...
+    assert blend_rmse < info["simple_mean_score"] - 1e-6
+    # ... and the junk is essentially dropped (the overfit-resistant win).
+    assert w["junk"] < 0.05
+
+
+def test_caruana_supports_maximize_metric():
+    # greater_is_better=True path (e.g. AUC-style): higher score == better.
+    rng = np.random.default_rng(1)
+    y = rng.normal(size=800)
+    good = y + rng.normal(0, 0.5, 800)
+    bad = rng.normal(0, 2.0, 800)
+    neg_rmse = lambda yt, yp: -float(np.sqrt(np.mean((yt - yp) ** 2)))
+    w, score, info = blend.caruana_select(
+        {"good": good, "bad": bad}, y,
+        score_fn=neg_rmse, greater_is_better=True, n_bag=10, seed=1)
+    assert abs(sum(w.values()) - 1.0) < 1e-6
+    assert w["good"] > w["bad"]
+    assert score >= info["best_single_score"] - 1e-6   # maximizing: blend ≥ best single

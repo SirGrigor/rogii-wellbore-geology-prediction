@@ -50,6 +50,25 @@ The S6E5 endgame was almost entirely about blending. The lessons, ranked by how 
   score_rho_scatter` visualizes it). You cannot merge upward from a single best solution.
 - **rank-normalize before blending** when members have different scales (`blend_math.rank_normalize`).
   rank_max peer-merge only helps with narrow-band support (ρ∈[0.9995,0.9997]) — rare; don't assume it.
+- **L56 — DEFAULT blend selector is now `blend.caruana_select`, NOT Nelder-Mead.** Caruana greedy
+  selection (with-replacement, bagged, sorted-init, positive-weights) is the documented engine behind
+  recent 1st-place tabular finishes and the method we previously lacked. It can't drive a member to a
+  degenerate/negative weight (the S6E5 v51 overfit), zeroes junk members cleanly, and gives a far
+  smaller fit→val gap. Use `nm_optimize_oof(allow_negative=True)` only as a secondary probe; SELECT
+  the final blend by Caruana's OOF score. Verified (tests/test_tooling.py): beats best-single + naive
+  mean and drops junk; metric-agnostic via `score_fn` (RMSE here, AUC for Playground).
+
+## 2b. Endgame discipline (the silver→gold PROCESS gap — L56)
+
+The meta-investigation found our biggest systematic gap is endgame *process*, not technique:
+- **Final-submission selection.** Ship exactly 2: **#1 = best-CV Caruana blend (safe anchor)**, **#2 = a
+  single, EXPLAINABLE risk pick** with a *different failure mode* (a named hypothesis: alignment recipe,
+  a feature, a spatial prior). Never two correlated CV-tuned variants — that's no hedge. Refuse any final
+  sub you can't explain, regardless of LB.
+- **Trust CV, but verify it first.** Track **OOF-vs-LB correlation** every submission. The 3-well LB is
+  near-noise here (per project memory) → choose on the sacred-well holdout + GroupKFold OOF, treat LB as a
+  sanity check only. Weak OOF↔(any signal) correlation = the CV split is wrong; fix it before modeling.
+- **Seed-bag + full-data retrain** the final members (10s of seeds) — cheap variance reduction for a close finish.
 
 ## 3. Regression toolkit (from S5E9 — directly applies; ROGII is RMSE)
 
