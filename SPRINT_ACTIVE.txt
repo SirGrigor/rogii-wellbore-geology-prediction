@@ -1,4 +1,4 @@
-notebooks/12_residual_diag.py
+notebooks/13_spatial_dip.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
