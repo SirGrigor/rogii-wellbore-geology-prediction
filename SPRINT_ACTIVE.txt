@@ -1,4 +1,4 @@
-notebooks/11_tabfm.py
+notebooks/12_residual_diag.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------

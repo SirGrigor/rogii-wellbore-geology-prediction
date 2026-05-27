@@ -119,6 +119,18 @@ feats already in the 222. Re-reading recon corrects an earlier over-claim:
 - **We're not failing — we matched the public ceiling with disciplined CV.** Remaining genuine-sacred bets:
   **TabICL** (decorrelated family; uncertain — public TabICL isn't top-tier) and a cheap more-iterations test.
   If those are flat too, harvest a robust 9.16 + the reusable toolkit (portfolio-over-medals).
+
+## 🔬 NOT harvesting — evidence-directed signal search (2026-05-27, ~10wk to deadline)
+TabPFN also NO-GO (corr 0.87, weight 0 — same lesson as the CNN). But 6 flats ≠ ceiling with 10 weeks left;
+they prove the **per-well-alignment paradigm is saturated** — the missing signal is in info the 222 DON'T
+encode. **Stop guessing; diagnose.** `12_residual_diag.py`: slice sacred error by horizon / align-uncertainty
+/ spatial-density / drift-magnitude + rank features by corr with |resid| + a spatial litmus (do
+close-neighbour wells err less?). The regime carrying the error = the axis to chase. Leading hypothesis:
+**cross-well / field-level structure** (the per-well paradigm aligns each well to its OWN typewell
+independently — it structurally can't see what neighbours reveal about the shared geology). Candidate signals
+queued: cross-well dip field (neighbours' prefix dTVT/d-displacement → local dip → drift; frame-independent,
+so it dodges the falsified absolute-TVT M1; leakage-free via known prefixes), per-step increment target,
+joint field/graph model. (docs/postmortem.md = the fallback if the search dead-ends, not the current plan.)
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
