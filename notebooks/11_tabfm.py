@@ -65,6 +65,13 @@ def main() -> None:
     probe_sel = rng.choice(probe_idx, min(N_EVAL, len(probe_idx)), replace=False)
     sac_sel = rng.choice(len(ys), min(N_EVAL, len(ys)), replace=False)
 
+    if not os.environ.get("TABPFN_TOKEN"):
+        raise SystemExit(
+            "TabPFN needs a license token (else it blocks on an interactive prompt in headless Colab).\n"
+            "  1. Accept the license at https://ux.priorlabs.ai  (License tab)\n"
+            "  2. Copy your key from https://ux.priorlabs.ai/account\n"
+            "  3. In the Colab runner, BEFORE the bootstrap cell: os.environ['TABPFN_TOKEN']='<key>'\n"
+            "  4. Re-run. (The token propagates to the training subprocess via os.environ.)")
     try:
         from tabpfn import TabPFNRegressor
     except Exception as e:
