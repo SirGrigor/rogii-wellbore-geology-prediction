@@ -97,7 +97,7 @@ def main() -> None:
     bw, _ = pp.tune_window(dev_ids, blend_oof, yd)
     sac_sm = pp.smooth_per_well(sac_ids, blend_sac, bw) if bw else blend_sac
     s_final = rmse(ys, sac_sm)
-    print(f"\nblend({'neg' if bn else 'pos'}) {s_blend:.3f} | +savgol(w={bw}) {s_final:.3f} | vs v5 9.155 | floor {rmse(ys, np.zeros_like(ys)):.3f}")
+    print(f"\nblend[{bk}] {s_blend:.3f} | +savgol(w={bw}) {s_final:.3f} | vs v5 9.155 | floor {rmse(ys, np.zeros_like(ys)):.3f}")
 
     final = min(s_blend, s_final)
     exp.record(oof_score_mean=final, oof_score_per_fold=[rmse(ys, sac_d[n]) for n in sac_d],
