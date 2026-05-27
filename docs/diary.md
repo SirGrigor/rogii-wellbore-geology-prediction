@@ -15,6 +15,7 @@ Metric: **RMSE** (↓ better). Source of truth: `experiments.jsonl` (git-tracked
 | [v5_ensemble](versions/v5_ensemble.md) | `v4_kernel9251` | +0.30000 | +0.33505 | 9.15465 | 9.15465 | +0.00000 | LGB×3 + CatBoost×3(GPU) + supervised dev-OOF blend → push v4's 9.49... |  |
 | [v6s8_fast](versions/v6s8_fast.md) | `v5_ensemble` | +0.00000 | -0.01176 | 9.16642 | 9.16642 | +0.00000 | FAST faithfulness probe: low-capacity profile (LGB leaves 63 / cat ... |  |
 | [v6s4_fast](versions/v6s4_fast.md) | `v5_ensemble` | +0.00000 | -0.03711 | 9.19176 | 9.19176 | +0.00000 | FAST faithfulness probe: low-capacity profile (LGB leaves 63 / cat ... |  |
+| [v8_feats](versions/v8_feats.md) | `v6s8_fast` | +0.10000 | +0.00686 | 9.15956 | 9.15956 | +0.00000 | Horizon+geometry (▲Z since PS, md-since-PS, inclination) and GR-tex... | ⚠ prediction_undershot, multiple_changes |
 
 ## Commands
 ```
