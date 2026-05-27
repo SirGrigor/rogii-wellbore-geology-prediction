@@ -90,6 +90,22 @@ spatial drift-rate** (Wave-3, neighbours' frame-independent dip — leakage-care
 neighbour stats), and a **reconnaissance revisit** (what do the 8.2 leaders do that the public 9.25
 kernel doesn't?). If those miss too, ~9.16 is our honest result (broke floor 14.08, matched public-best
 on sacred) and the medal likely isn't reachable this round — harvest the lessons + reusable toolkit.
+
+## 🔓 Recon revisit — the wall has KNOWN exits (2026-05-27)
+LB top 7.97 → 8.24 → 8.46…; **Deotte (NVIDIA GM) only #7 at 8.797** ⇒ the gap to 8.2 is METHOD, not
+compute. Three public solutions (romantamrazov TOP-3 ~8.0; kojimar TabICL stack; mitchgansemer 9.40)
+reveal what we're missing — and our last two bets used the **wrong instance** of the right idea:
+- **TabICL** (tabular foundation / in-context model) is the orthogonal estimator that works — kojimar's
+  stack is *dominated by the TabICL branch*. (Our raw-GR CNN was the wrong orthogonal model; corr 0.62.)
+  Public `rogii-tabicl-mirror` dataset runs it offline.
+- **Uncertainty/divergence features** are the right features: inter-signal std (master uncertainty),
+  formation-consensus std/range, per-formation known-zone RMSE, estimator divergence. (Our W1/W2
+  horizon/GR-texture were the wrong features → flat.) These tell the GBDT *where to trust the drift*.
+- **savgol smoothing + clip post-processing** (the deferred Strategy-3) — the TOP-3 solution uses it.
+- **ridge/NNLS stack** (positive weights), 8000 iters + heavier reg, DWT-GR features.
+
+**Revised descent (evidence-backed):** S3a savgol+clip post-proc → S3b uncertainty/divergence feats →
+S3c TabICL stack member → S3d ridge/NNLS stack. Medal looks reachable (method, not compute).
 | **M1** | **nearby-well spatial dip** (cKDTree → weighted dip plane from neighbors' full TVT) | geology is spatially coherent across the field (slides 12-13); cross-well, not per-well noise | **≤ 13.5 (break floor)** | ✗ v1 surf=Z−TVT interp **547ft** — falsified: TVT is typewell-frame (baseline differs ~2000ft well-to-well), not a global datum |
 
 > **M1 course-correction (2026-05-26):** the surf-datum hypothesis is falsified — TVT isn't cross-well
