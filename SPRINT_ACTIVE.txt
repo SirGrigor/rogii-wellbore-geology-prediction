@@ -1,4 +1,4 @@
-notebooks/20_sdtw.py
+notebooks/21_signal_hunt.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
@@ -6,12 +6,16 @@ notebooks/20_sdtw.py
 # To switch: edit this line, push, then re-run clone → meta → install → run.
 # ============================================================================
 #
-# STATUS (2026-05-28): soft-DTW signal lever (C) — proof-of-life. Differentiable
-# soft-DTW (Cuturi 2017) with learned cosine cost from a siamese 1D-CNN GR-window
-# encoder, α-readout via autograd, trained MSE on TVT drift, GroupKFold(by well).
-# Conservative config (~2h GPU): stride-16 / band W=80 / d=32 / 3 folds / 8 epochs.
-# Decision gate: sacred(sdtw ⊕ cat) < 9.100 by ≥0.05 → build Cuturi closed-form
-# α-backward + quality config (~5× faster). Flat → soft-DTW honest end. < 0 → drop.
+# STATUS (2026-05-28): SIGNAL HUNT diagnostic (paradigm-shift gate). Adopted the
+# 4-layer "model the model's failure" framework — tests whether 9.100 residuals
+# carry LURKING SIGNAL (avoidable bias) or are NOISE (irreducible ceiling).
+# Headline = ONE number: R²_residual_boost. > 0.05 → SHAP names the missing
+# features. ≈ 0 → 9.16 is a proven ceiling, not suspected → pivot paradigm.
+#
+# Replaces 20_sdtw.py on the active line because soft-DTW is in-paradigm and
+# speculative (~2 GPU-h); the hunt is 10-min CPU and decides whether ANY in-
+# paradigm extension is worth running. 20_sdtw.py stays in repo for re-activation
+# if the hunt says alignment-paradigm has un-extracted signal.
 #
 # WORKFLOW REMINDER:
 #   - Every experiment goes through the diary discipline FIRST:
@@ -24,4 +28,4 @@ notebooks/20_sdtw.py
 #
 # LOCKED PICKS FALLBACK (fill once we have submissions):
 #   Pick #1 = v5 stack (sacred 9.155, LB 9.644)
-#   Pick #2 = (await sdtw blend or harvest decision)
+#   Pick #2 = (await hunt verdict → either alignment FE or paradigm pivot)
