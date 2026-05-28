@@ -1,4 +1,4 @@
-notebooks/19_optuna.py
+notebooks/20_sdtw.py
 # ============================================================================
 # ACTIVE EXPERIMENT  (read by colab_runner.ipynb cell "Version meta")
 # ----------------------------------------------------------------------------
@@ -6,11 +6,12 @@ notebooks/19_optuna.py
 # To switch: edit this line, push, then re-run clone → meta → install → run.
 # ============================================================================
 #
-# STATUS (2026-05-25): tooling complete. Tier-0 floor v0_floor = 15.91 ft RMSE.
-# ACTIVE = v1_lgb_resid (residual LGB baseline) — RUN ON COLAB (full-data training;
-# never local, per feedback_cloud-first-compute). It logs to the diary, saves
-# probs/v1_lgb_resid/model_full.pkl for the Kaggle inference notebook, and prints
-# feature gains to tell Tier 1 whether the alignment recipe is the bottleneck.
+# STATUS (2026-05-28): soft-DTW signal lever (C) — proof-of-life. Differentiable
+# soft-DTW (Cuturi 2017) with learned cosine cost from a siamese 1D-CNN GR-window
+# encoder, α-readout via autograd, trained MSE on TVT drift, GroupKFold(by well).
+# Conservative config (~2h GPU): stride-16 / band W=80 / d=32 / 3 folds / 8 epochs.
+# Decision gate: sacred(sdtw ⊕ cat) < 9.100 by ≥0.05 → build Cuturi closed-form
+# α-backward + quality config (~5× faster). Flat → soft-DTW honest end. < 0 → drop.
 #
 # WORKFLOW REMINDER:
 #   - Every experiment goes through the diary discipline FIRST:
@@ -22,5 +23,5 @@ notebooks/19_optuna.py
 #     EDA, blend math, post-processing (feedback_cloud-first-compute).
 #
 # LOCKED PICKS FALLBACK (fill once we have submissions):
-#   Pick #1 = (none yet)
-#   Pick #2 = (none yet)
+#   Pick #1 = v5 stack (sacred 9.155, LB 9.644)
+#   Pick #2 = (await sdtw blend or harvest decision)

@@ -26,6 +26,7 @@ class SDTWEpisode:
     tw_gr: np.ndarray      # [M, L]   typewell GR windows in the BAND around the anchor (z-scored)
     tw_drift: np.ndarray   # [M]      typewell TVT − last_known   (frame-independent)
     anchor_idx: int        # index within tw_gr/tw_drift of the anchor row (drift ≈ 0)
+    last_tvt: float        # the well's last_known TVT (drift→TVT conversion at blend time)
 
 
 def build_episode(wid: str, split: str = "train", win: int = 32, band: int = 150) -> SDTWEpisode | None:
@@ -55,7 +56,8 @@ def build_episode(wid: str, split: str = "train", win: int = 32, band: int = 150
     tw_drift = (tw_tvt[lo:hi] - last_known).astype(np.float32)
 
     return SDTWEpisode(well=wid, q_gr=q_gr, q_y=q_y, q_ids=q_ids,
-                       tw_gr=tw_gr, tw_drift=tw_drift, anchor_idx=anchor - lo)
+                       tw_gr=tw_gr, tw_drift=tw_drift, anchor_idx=anchor - lo,
+                       last_tvt=last_known)
 
 
 def build(well_ids: list[str], split: str = "train", win: int = 32, band: int = 150) -> list[SDTWEpisode]:
